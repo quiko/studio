@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from 'next/navigation';
@@ -6,6 +7,12 @@ import { UserType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { User, Building } from 'lucide-react';
 
+/**
+ * @deprecated This component is no longer used directly on the landing page.
+ * Its functionality has been integrated into dedicated Login and Sign Up forms.
+ * It's kept here for potential future reuse or reference if a simpler selection
+ * mechanism is needed elsewhere.
+ */
 export function UserTypeSelector() {
   const { setUserType } = useUser();
   const router = useRouter();

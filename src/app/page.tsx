@@ -1,17 +1,17 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { APP_NAME } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Home, Info, Users, Album, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react';
+import { Home, Users, Album, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react';
 import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo';
 
 export default function LandingPage() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden p-4 md:p-8 grid-background">
       
-      <Link href="#" className="absolute top-6 right-6 md:top-8 md:right-8 text-sm text-primary hover:underline z-20 flex items-center group">
-        Send your demos <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+      <Link href="/signup" className="absolute top-6 right-6 md:top-8 md:right-8 text-sm text-primary hover:underline z-20 flex items-center group">
+        Sign Up <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
       </Link>
 
       {/* Decorative Images */}
@@ -59,11 +59,11 @@ export default function LandingPage() {
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 mb-3 md:mb-5 w-[calc(100%-2rem)] max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg z-20">
         <div className="bg-black/60 backdrop-blur-lg rounded-xl shadow-2xl p-2 flex items-center justify-around text-sm">
-          <Link href="#" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
+          <Link href="/" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
             <Home className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-xs mt-0.5">Home</span>
           </Link>
-          <Link href="/dashboard" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
+          <Link href="/login" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
             <UserCircle className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-xs mt-0.5">Login</span>
           </Link>
@@ -79,7 +79,7 @@ export default function LandingPage() {
             <Mail className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-xs mt-0.5">Contact</span>
           </Link>
-          <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-full">
+          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-full"> {/* Point avatar to dashboard or profile */}
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-transparent hover:border-primary">
               <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="profile abstract" />
               <AvatarFallback>U</AvatarFallback>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -19,7 +20,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { LogoIcon } from '@/components/icons/LogoIcon';
-import { LogOut, Home } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -28,38 +29,39 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   const router = useRouter();
   const pathname = usePathname();
 
+  useEffect(() => {
+    // If loading is finished and there's no user type, redirect to login.
+    // This check ensures we don't redirect during initial load or if already on login/signup.
+    if (!isLoading && userType === UserType.NONE && pathname !== '/login' && pathname !== '/signup') {
+      router.push('/login');
+    }
+  }, [isLoading, userType, router, pathname]);
+
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <Skeleton className="h-4 w-[250px] ml-4" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        {/* You can put a more sophisticated global loader here */}
+        <Skeleton className="h-12 w-12 rounded-full bg-muted" />
+        <Skeleton className="h-4 w-[250px] ml-4 bg-muted" />
       </div>
     );
   }
 
+  // If still no user type after loading (and redirect hasn't happened yet or is in progress),
+  // show a minimal loading state or null to prevent flashing content.
   if (userType === UserType.NONE) {
-    // Redirect on client-side only
-    if (typeof window !== 'undefined') {
-       // Check if current path is already the landing page to avoid redirect loop
-      if (pathname !== '/') {
-        router.push('/');
-      } else {
-        // If already on landing page and no user type, it might be initial load or post-logout.
-        // We can show a minimal loading/selector state or just let the landing page render.
-        // For now, let UserTypeSelector on '/' handle it.
-      }
-    }
-     // Render nothing or a loader while redirecting or if on '/'
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+     return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
+  
 
   const handleLogout = () => {
     setUserType(UserType.NONE);
-    router.push('/');
+    router.push('/login'); // Redirect to login page after logout
   };
 
   const filteredNavItems = NAV_ITEMS.filter(item => item.allowedUsers.includes(userType));
@@ -96,7 +98,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
         <SidebarFooter className="p-4">
            <div className="flex items-center gap-2 mb-2">
             <Avatar>
-              <AvatarImage src={`https://placehold.co/40x40.png?text=${userInitial}`} alt={userType} />
+              <AvatarImage src={`https://placehold.co/40x40.png?text=${userInitial}`} alt={userType} data-ai-hint="abstract initial"/>
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
@@ -124,3 +126,4 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     </SidebarProvider>
   );
 }
+
