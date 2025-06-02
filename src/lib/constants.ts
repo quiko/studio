@@ -14,7 +14,7 @@ export interface NavItem {
   allowedUsers: UserType[];
 }
 
-export const APP_NAME = "MaestroAI";
+export const APP_NAME = "Kurate";
 
 export const NAV_ITEMS: NavItem[] = [
   {

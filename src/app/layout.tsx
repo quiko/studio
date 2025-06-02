@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AppProviders } from '@/components/providers/AppProviders';
 import { Toaster } from "@/components/ui/toaster";
+import { APP_NAME } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'MaestroAI',
-  description: 'AI-powered tools for event organizers and musicians.',
+  title: APP_NAME,
+  description: 'AI-powered tools for event organizers and musicians, reimagined by Kurate.',
 };
 
 export default function RootLayout({
