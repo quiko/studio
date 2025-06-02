@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE } from '@/lib/constants';
+import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE, type GeneratedContractData } from '@/lib/constants';
 
 interface UserContextType {
   firebaseUser: FirebaseUser | null;
@@ -21,12 +21,16 @@ interface UserContextType {
   artistProfiles: Record<string, ArtistProfileData>;
   getArtistProfile: (userId: string) => ArtistProfileData;
   updateArtistProfile: (userId: string, profile: ArtistProfileData) => void;
+  organizerContracts: GeneratedContractData[];
+  addOrganizerContract: (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status'>) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY_EVENTS = 'maestroai_events';
-const LOCAL_STORAGE_KEY_ARTIST_PROFILES = 'maestroai_artist_profiles'; // Still using LS for profiles for now
+const LOCAL_STORAGE_KEY_ARTIST_PROFILES = 'maestroai_artist_profiles';
+const LOCAL_STORAGE_KEY_ORGANIZER_CONTRACTS = 'maestroai_organizer_contracts';
+
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -35,35 +39,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const [events, setEvents] = useState<EventItem[]>([]);
   const [artistProfiles, setArtistProfiles] = useState<Record<string, ArtistProfileData>>({});
+  const [organizerContracts, setOrganizerContracts] = useState<GeneratedContractData[]>([]);
+
 
   useEffect(() => {
-    // Load events and profiles from localStorage (unchanged for now)
     try {
       const storedEvents = localStorage.getItem(LOCAL_STORAGE_KEY_EVENTS);
-      if (storedEvents) {
-        setEvents(JSON.parse(storedEvents));
-      }
+      if (storedEvents) setEvents(JSON.parse(storedEvents));
+      
       const storedArtistProfiles = localStorage.getItem(LOCAL_STORAGE_KEY_ARTIST_PROFILES);
-      if (storedArtistProfiles) {
-        setArtistProfiles(JSON.parse(storedArtistProfiles));
-      }
+      if (storedArtistProfiles) setArtistProfiles(JSON.parse(storedArtistProfiles));
+
+      const storedOrganizerContracts = localStorage.getItem(LOCAL_STORAGE_KEY_ORGANIZER_CONTRACTS);
+      if (storedOrganizerContracts) setOrganizerContracts(JSON.parse(storedOrganizerContracts));
+
     } catch (error) {
-      console.error("Failed to load non-auth data from localStorage", error);
+      console.error("Failed to load data from localStorage", error);
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
-        // Fetch role from Firestore
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
           setUserRole(userData.role as UserType || UserType.NONE);
         } else {
-          // This case might happen if Firestore doc creation failed during signup
-          // Or if user was created directly in Firebase console without a role
           setUserRole(UserType.NONE); 
         }
       } else {
@@ -120,15 +123,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // userId here should be the Firebase UID
   const getArtistProfile = (userId: string): ArtistProfileData => {
     return artistProfiles[userId] || { ...DEFAULT_ARTIST_PROFILE, name: "Artist Profile" };
   };
 
-  // userId here should be the Firebase UID
   const updateArtistProfile = (userId: string, profile: ArtistProfileData) => {
     persistArtistProfiles({ ...artistProfiles, [userId]: profile });
   };
+
+  const persistOrganizerContracts = (updatedContracts: GeneratedContractData[]) => {
+    setOrganizerContracts(updatedContracts);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ORGANIZER_CONTRACTS, JSON.stringify(updatedContracts));
+    }
+  };
+
+  const addOrganizerContract = (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status'>) => {
+    const newContract: GeneratedContractData = {
+      ...contractData,
+      id: `contract-${Date.now().toString()}-${Math.random().toString(36).substring(2,7)}`,
+      createdAt: new Date().toISOString(),
+      status: "draft",
+    };
+    persistOrganizerContracts([...organizerContracts, newContract]);
+  };
+
 
   return (
     <UserContext.Provider value={{ 
@@ -138,7 +157,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUserRoleState,
       logout,
       events, addEvent, updateEvent, deleteEvent, 
-      artistProfiles, getArtistProfile, updateArtistProfile 
+      artistProfiles, getArtistProfile, updateArtistProfile,
+      organizerContracts, addOrganizerContract
     }}>
       {children}
     </UserContext.Provider>

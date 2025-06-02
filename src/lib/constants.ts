@@ -168,6 +168,27 @@ export const MOCK_ARTIST_CONTRACTS: ArtistContractItem[] = [
   },
 ];
 
+// For Organizer-created contracts (before PDF/signing)
+export type GeneratedContractStatus = "draft" | "pending_artist_signature" | "pending_organizer_signature" | "signed_by_organizer" | "signed_by_artist" | "active" | "completed" | "cancelled";
+
+export type GeneratedContractData = {
+  id: string;
+  organizerId: string; // Firebase UID
+  organizerName: string;
+  artistId?: string; // Firebase UID - to be filled later if artist exists on platform
+  artistName: string; // Name entered by organizer
+  eventName: string;
+  eventDate: string; // ISO String
+  eventLocation: string;
+  fee: string;
+  clauses: string; // Custom clauses added by organizer
+  status: GeneratedContractStatus;
+  createdAt: string; // ISO String
+  // contractUrl?: string; // Link to PDF in Firebase Storage - for future
+  // signedByOrganizer?: boolean;
+  // signedByArtist?: boolean;
+};
+
 
 // Messaging System Data
 export const CURRENT_USER_MOCK_ID = 'currentUserMockId'; // Represents the logged-in user
@@ -250,5 +271,3 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     ],
   }
 ];
-
-    
