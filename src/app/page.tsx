@@ -17,12 +17,12 @@ export default function LandingPage() {
       {/* Decorative Images */}
       <div className="absolute top-10 left-10 md:top-16 md:left-16 w-28 h-44 md:w-32 md:h-48 z-0 opacity-30 transform -rotate-6">
         <Image 
-          src="https://placehold.co/200x300.png" 
-          alt="Singer silhouette" 
+          src="https://images.unsplash.com/photo-1587522608003-be063e0689a9?q=80&w=200&h=300&fit=crop" 
+          alt="Artist in front of neon lights" 
           layout="fill" 
           objectFit="cover" 
           className="rounded-lg shadow-xl"
-          data-ai-hint="singer silhouette stage" 
+          data-ai-hint="artist neon" 
         />
       </div>
       <div className="absolute top-16 right-10 md:top-24 md:right-20 w-36 h-28 md:w-40 md:h-32 z-0 opacity-30 transform rotate-4">
