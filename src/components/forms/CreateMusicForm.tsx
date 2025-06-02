@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createMusic, type CreateMusicOutput } from "@/ai/flows/create-music";
@@ -42,8 +42,16 @@ const instrumentsList = [
   { id: "sampler", label: "Sampler / Sequencer" },
 ];
 
+const genreList = [
+  "Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Classical", "Blues", 
+  "Country", "Folk", "Reggae", "R&B", "Soul", "Metal", "Punk", 
+  "Funk", "Disco", "Techno", "House", "Trance", "Ambient", "Lo-fi", 
+  "Synthwave", "Orchestral", "World", "Indie"
+].sort();
+
+
 const formSchema = z.object({
-  genre: z.string().min(3, { message: "Genre must be at least 3 characters." }),
+  genre: z.string().min(1, { message: "Please select a genre." }),
   mood: z.string().min(3, { message: "Mood must be at least 3 characters." }),
   instruments: z.array(z.string()).refine((value) => value.length > 0, {
     message: "Please select at least one instrument.",
@@ -113,9 +121,18 @@ export default function CreateMusicForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Genre</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Lo-fi, Classical, Synthwave" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a music genre" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {genreList.map((genre) => (
+                          <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
