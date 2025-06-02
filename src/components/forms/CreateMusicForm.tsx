@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { createMusic, type CreateMusicOutput } from "@/ai/flows/create-music";
+import { createMusic, type CreateMusicOutput, type CreateMusicInput } from "@/ai/flows/create-music";
 import { useState } from "react";
 import { Loader2, Music2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -84,7 +84,7 @@ export default function CreateMusicForm() {
       mood: "",
       instruments: [],
       length: "medium",
-      styleVariation: "",
+      styleVariation: "", // Empty string will show placeholder by default
     },
   });
 
@@ -92,9 +92,12 @@ export default function CreateMusicForm() {
     setIsLoading(true);
     setComposition(null);
     try {
-      const submissionValues = {
-        ...values,
-        instruments: values.instruments.join(', '), // Convert array to comma-separated string
+      const submissionValues: CreateMusicInput = {
+        genre: values.genre,
+        mood: values.mood,
+        instruments: values.instruments.join(', '),
+        length: values.length,
+        styleVariation: (values.styleVariation === "__NONE__" || values.styleVariation === "") ? undefined : values.styleVariation,
       };
       const result = await createMusic(submissionValues);
       setComposition(result);
@@ -260,7 +263,7 @@ export default function CreateMusicForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem> 
+                        <SelectItem value="__NONE__">None</SelectItem>
                         {styleVariationList.map((style) => (
                           <SelectItem key={style} value={style}>{style}</SelectItem>
                         ))}

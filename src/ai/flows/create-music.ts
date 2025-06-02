@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -16,7 +17,7 @@ const CreateMusicInputSchema = z.object({
   mood: z.string().describe('The mood of the music (e.g., happy, sad, energetic).'),
   instruments: z.string().describe('The instruments to be used in the composition.'),
   length: z.string().describe('The desired length of the song (e.g., short, medium, long).'),
-  styleVariation: z.string().describe('Specific stylistic variations to add to the song.'),
+  styleVariation: z.string().describe('Specific stylistic variations to add to the song.').optional(),
 });
 export type CreateMusicInput = z.infer<typeof CreateMusicInputSchema>;
 
@@ -40,7 +41,9 @@ Genre: {{{genre}}}
 Mood: {{{mood}}}
 Instruments: {{{instruments}}}
 Length: {{{length}}}
+{{#if styleVariation}}
 Stylistic Variation: {{{styleVariation}}}
+{{/if}}
 
 Provide the music composition in a textual format that can be interpreted as sheet music, MIDI data, or a descriptive format. Also, explain the composition including elements and why.`,
 });
