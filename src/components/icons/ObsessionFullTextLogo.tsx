@@ -19,15 +19,7 @@ export function ObsessionFullTextLogo(props: SVGProps<SVGSVGElement>) {
         <rect x="68" y="62.5" width="10" height="3.5" rx="1.5"/>
         <rect x="66" y="68.5" width="10" height="3.5" rx="1.5"/>
       </g> */}
-      <text 
-        x="0"  // Adjusted x-coordinate from 110 to 0
-        y="78" 
-        fontFamily="Arial, 'Helvetica Neue', Helvetica, sans-serif" 
-        fontSize="70" 
-        fontWeight="bold"
-      >
-        BSESSION
-      </text>
+      {/* The "BSESSION" text element has been removed */}
     </svg>
   );
 }
