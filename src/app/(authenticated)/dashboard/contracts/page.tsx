@@ -1,28 +1,31 @@
+
 "use client";
 
 import ContractGeneratorForm from "@/components/forms/ContractGeneratorForm";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { UserType } from "@/lib/constants";
+import { UserType, MOCK_ARTIST_CONTRACTS } from "@/lib/constants";
 import { useUser } from "@/contexts/UserContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Construction, FileWarning } from "lucide-react";
-import Image from 'next/image';
+import { FileWarning, Info, FileText } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArtistContractCard } from "@/components/cards/ArtistContractCard";
+
 
 export default function ContractsPage() {
-  const { userType } = useUser();
+  const { userRole } = useUser();
 
   return (
     <div>
       <PageHeader
         title="Contract Management"
         description={
-          userType === UserType.ORGANIZER
+          userRole === UserType.ORGANIZER
             ? "Generate draft contracts for your collaborations."
             : "View and manage your agreements."
         }
       />
 
-      {userType === UserType.ORGANIZER ? (
+      {userRole === UserType.ORGANIZER && (
         <Card>
           <CardHeader>
             <CardTitle className="font-headline">Contract Template Generator</CardTitle>
@@ -38,30 +41,26 @@ export default function ContractsPage() {
             <ContractGeneratorForm />
           </CardContent>
         </Card>
-      ) : (
-        <Card className="text-center">
-          <CardHeader>
-            <CardTitle className="font-headline">Your Contracts</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-6 py-12">
-            <Construction className="h-24 w-24 text-accent" />
-            <p className="text-xl text-muted-foreground">
-              Artist contract management is under development.
-            </p>
-            <p className="max-w-md">
-              Soon, you'll be able to view contracts shared by organizers and manage your agreements here.
-            </p>
-            <div className="relative w-full max-w-sm h-64 mt-4">
-             <Image 
-                src="https://placehold.co/600x400.png" 
-                alt="Contract document concept" 
-                layout="fill" 
-                objectFit="contain"
-                data-ai-hint="document contract"
-              />
+      )}
+
+      {userRole === UserType.ARTIST && (
+        <div>
+          {MOCK_ARTIST_CONTRACTS.length === 0 ? (
+            <Alert>
+              <FileText className="h-4 w-4" />
+              <AlertTitle className="font-headline">No Contracts Yet</AlertTitle>
+              <AlertDescription>
+                You currently don't have any contracts. Contracts shared by organizers will appear here.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {MOCK_ARTIST_CONTRACTS.map((contract) => (
+                <ArtistContractCard key={contract.id} contract={contract} />
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       )}
     </div>
   );
