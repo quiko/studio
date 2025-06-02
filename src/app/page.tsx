@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { APP_NAME } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Home, Users, Album, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react';
+import { Home, Users, Info, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react'; // Changed Album to Info
 import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo';
 
 export default function LandingPage() {
@@ -71,9 +71,9 @@ export default function LandingPage() {
             <Users className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-xs mt-0.5">Artists</span>
           </Link>
-          <Link href="#" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
-            <Album className="h-5 w-5 sm:h-6 sm:w-6" />
-            <span className="text-xs mt-0.5">Releases</span>
+          <Link href="/how-it-works" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
+            <Info className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="text-xs mt-0.5">How it works</span>
           </Link>
           <Link href="#" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
             <Mail className="h-5 w-5 sm:h-6 sm:w-6" />

@@ -1,0 +1,52 @@
+type User @table {
+  userType: String!
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoURL: String
+  bio: String
+}
+
+type Event @table {
+  organizer: User!
+  name: String!
+  date: Date!
+  location: String!
+  budget: Int!
+  createdAt: Timestamp!
+  description: String
+  genre: String
+}
+
+type ArtistProfile @table {
+  artist: User!
+  indicativeRate: Int!
+  createdAt: Timestamp!
+  portfolioURL: String
+  genres: [String]
+  reviews: String
+}
+
+type Suggestion @table {
+  event: Event!
+  artist: User!
+  matchScore: Float!
+  reasoning: String!
+  notes: String
+}
+
+type Message @table {
+  sender: User!
+  recipient: User!
+  content: String!
+  timestamp: Timestamp!
+  event: Event
+}
+
+type Contract @table {
+  event: Event!
+  template: String!
+  createdAt: Timestamp!
+  terms: String
+  notes: String
+}
