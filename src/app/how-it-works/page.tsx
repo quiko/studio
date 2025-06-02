@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MicVocal, Users, Edit3, Search, FileText, MessageSquare, Wand2, CalendarPlus, Palette, DollarSign, CheckCircle, Lightbulb, Rocket, BarChart } from 'lucide-react';
+import { ArrowLeft, MicVocal, Users, Edit3, Search, FileText, MessageSquare, Wand2, CalendarPlus, Palette, DollarSign, CheckCircle, Lightbulb, Rocket, BarChart, ArrowRight } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 
 export default function HowItWorksPage() {
