@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
+  Form, // Reverted to original name
   FormControl,
   FormDescription,
   FormField,
@@ -17,11 +17,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Save, UserSearch } from "lucide-react";
+import { Loader2, Save, UserSearch, CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/contexts/UserContext";
@@ -30,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const formSchema = z.object({
   organizerName: z.string().min(1, { message: "Organizer name is pre-filled." }),
-  artistName: z.string().min(2, { message: "Artist name is required." }), // This will be the display name
+  artistName: z.string().min(2, { message: "Artist name is required." }),
   eventName: z.string().min(3, { message: "Event name is required." }),
   eventDate: z.date({ required_error: "Event date is required." }),
   eventLocation: z.string().min(3, { message: "Event location is required." }),
@@ -41,10 +40,10 @@ const formSchema = z.object({
 type CreateContractFormValues = z.infer<typeof formSchema>;
 
 interface SuggestionArtist extends ArtistProfileData {
-  id: string; // Firebase UID
+  id: string;
 }
 
-export default function CreateContractForm(): JSX.Element {
+export default function CreateContractForm() {
   const { firebaseUser, addOrganizerContract, artistProfiles: allArtistProfilesMap } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -68,7 +67,7 @@ export default function CreateContractForm(): JSX.Element {
       clauses: "Standard performance terms apply. Payment due upon completion. Cancellation policy: 14 days notice.",
     },
   });
-  
+
   useEffect(() => {
     if (firebaseUser) {
       form.setValue("organizerName", firebaseUser.displayName || firebaseUser.email || "");
@@ -90,8 +89,8 @@ export default function CreateContractForm(): JSX.Element {
   const handleArtistSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setArtistSearchTerm(term);
-    form.setValue("artistName", term); // Keep react-hook-form updated
-    setSelectedArtistId(null); // Clear selected artist if user types
+    form.setValue("artistName", term);
+    setSelectedArtistId(null);
 
     if (term.length > 1) {
       const profilesArray: SuggestionArtist[] = Object.entries(allArtistProfilesMap)
@@ -107,7 +106,7 @@ export default function CreateContractForm(): JSX.Element {
 
   const handleArtistSuggestionClick = (artist: SuggestionArtist) => {
     setArtistSearchTerm(artist.name);
-    form.setValue("artistName", artist.name); // Update react-hook-form
+    form.setValue("artistName", artist.name);
     setSelectedArtistId(artist.id);
     setArtistSuggestions([]);
     setShowArtistSuggestions(false);
@@ -120,12 +119,12 @@ export default function CreateContractForm(): JSX.Element {
         return;
     }
     setIsLoading(true);
-    
+
     const newContractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'> = {
         organizerId: firebaseUser.uid,
         organizerName: values.organizerName,
-        artistName: values.artistName, // This is the name from the input/selection
-        artistId: selectedArtistId || undefined, // Use the stored ID
+        artistName: values.artistName,
+        artistId: selectedArtistId || undefined,
         eventName: values.eventName,
         eventDate: values.eventDate.toISOString(),
         eventLocation: values.eventLocation,
@@ -135,7 +134,7 @@ export default function CreateContractForm(): JSX.Element {
 
     try {
       addOrganizerContract(newContractData);
-      
+
       toast({
         title: "Contract Draft Saved",
         description: `Draft for "${values.eventName}" with ${values.artistName} has been saved.`,
@@ -162,16 +161,25 @@ export default function CreateContractForm(): JSX.Element {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField control={form.control} name="organizerName" render={({ field }) => (
-            <FormItem><FormLabel>Organizer Name</FormLabel><FormControl><Input {...field} readOnly className="bg-muted/50" /></FormControl><FormMessage /></FormItem>
-        )} />
-        
+        <FormField
+          control={form.control}
+          name="organizerName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Organizer Name</FormLabel>
+              <FormControl>
+                <Input {...field} readOnly className="bg-muted/50" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="artistName"
-              render={({ field }) 
-              => (
+              render={({ field }) => (
               <FormItem>
                 <FormLabel>Artist Name</FormLabel>
                 <div className="relative" ref={suggestionsRef}>
@@ -179,11 +187,11 @@ export default function CreateContractForm(): JSX.Element {
                     <div className="relative">
                         <UserSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                        placeholder="Search for registered artists..."
-                        value={artistSearchTerm}
-                        onChange={handleArtistSearchChange}
-                        onFocus={() => artistSearchTerm.length > 1 && setShowArtistSuggestions(true)}
-                        className="pl-10"
+                          placeholder="Search for registered artists..."
+                          value={artistSearchTerm}
+                          onChange={handleArtistSearchChange}
+                          onFocus={() => artistSearchTerm.length > 1 && setShowArtistSuggestions(true)}
+                          className="pl-10"
                         />
                     </div>
                   </FormControl>
@@ -213,36 +221,109 @@ export default function CreateContractForm(): JSX.Element {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="eventName" render={({ field }) => (
-            <FormItem><FormLabel>Event Name</FormLabel><FormControl><Input placeholder="e.g., Annual Charity Gala" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="eventName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Annual Charity Gala" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-            <FormField control={form.control} name="eventDate" render={({ field }) => (
-            <FormItem className="flex flex-col"><FormLabel>Event Date</FormLabel><Popover>
-                <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!field.value && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value ? format(field.value, "PPP") : <span>Pick event date</span>}
-                    </Button></FormControl></PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} /></PopoverContent>
-            </Popover><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="eventLocation" render={({ field }) => (
-            <FormItem><FormLabel>Event Location</FormLabel><FormControl><Input placeholder="e.g., The Grand Ballroom, Cityville" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="fee" render={({ field }) => (
-            <FormItem><FormLabel>Performance Fee</FormLabel><FormControl><Input placeholder="$1,200.00" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="eventDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Event Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : <span>Pick event date</span>}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="eventLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., The Grand Ballroom, Cityville" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="fee"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Performance Fee</FormLabel>
+                  <FormControl>
+                    <Input placeholder="$1,200.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
 
-        <FormField control={form.control} name="clauses" render={({ field }) => (
-        <FormItem><FormLabel>Terms & Clauses</FormLabel><FormControl><Textarea placeholder="Specify payment terms, cancellation policy, technical rider summary, etc." {...field} rows={6} /></FormControl><FormDescription>Detail the key terms of the agreement.</FormDescription><FormMessage /></FormItem>
-        )} />
+        <FormField
+          control={form.control}
+          name="clauses"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Terms & Clauses</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Specify payment terms, cancellation policy, technical rider summary, etc."
+                  {...field}
+                  rows={6}
+                />
+              </FormControl>
+              <FormDescription>
+                Detail the key terms of the agreement.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <Button type="submit" disabled={isLoading || !firebaseUser} className="w-full sm:w-auto">
-        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-        Save Draft Contract
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Save Draft Contract
         </Button>
         <p className="text-xs text-muted-foreground mt-2">
             Note: This saves a draft. PDF generation, e-signatures, and sending to artist will be available in a future step.
