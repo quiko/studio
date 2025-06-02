@@ -55,6 +55,12 @@ const moodList = [
   "Groovy", "Nostalgic", "Dreamy", "Experimental"
 ].sort();
 
+const styleVariationList = [
+  "Acoustic", "Orchestral", "Electronic", "Minimalist", "Ambient",
+  "8-bit / Chiptune", "Cinematic", "Lo-fi", "Synthwave", "Live Band Feel",
+  "Unplugged", "Experimental"
+].sort();
+
 
 const formSchema = z.object({
   genre: z.string().min(1, { message: "Please select a genre." }),
@@ -247,9 +253,19 @@ export default function CreateMusicForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stylistic Variation (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 8-bit, Orchestral, Acoustic" {...field} />
-                    </FormControl>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a stylistic variation (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem> 
+                        {styleVariationList.map((style) => (
+                          <SelectItem key={style} value={style}>{style}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
