@@ -167,3 +167,88 @@ export const MOCK_ARTIST_CONTRACTS: ArtistContractItem[] = [
     `,
   },
 ];
+
+
+// Messaging System Data
+export const CURRENT_USER_MOCK_ID = 'currentUserMockId'; // Represents the logged-in user
+
+export interface Message {
+  id: string;
+  senderId: string; // Use CURRENT_USER_MOCK_ID for the logged-in user, or another ID for contact
+  text: string;
+  timestamp: string; // ISO string e.g. new Date().toISOString()
+}
+
+export interface Conversation {
+  id: string;
+  contactId: string;
+  contactName: string;
+  contactAvatar: string; // URL
+  contactRole: UserType; // Organizer or Artist
+  lastMessagePreview: string;
+  lastMessageTimestamp: string; // ISO string
+  unreadCount: number;
+  messages: Message[];
+}
+
+export const MOCK_CONVERSATIONS: Conversation[] = [
+  {
+    id: 'convo-1',
+    contactId: 'organizer-alpha',
+    contactName: 'Alex Ray (SoundWave Events)',
+    contactAvatar: 'https://placehold.co/40x40.png?text=AR',
+    contactRole: UserType.ORGANIZER,
+    lastMessagePreview: "Perfect, see you then!",
+    lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
+    unreadCount: 0,
+    messages: [
+      { id: 'msg-1-1', senderId: 'organizer-alpha', text: "Hey! Just wanted to confirm the soundcheck time for Friday's gig. Is 3 PM still good for you?", timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+      { id: 'msg-1-2', senderId: CURRENT_USER_MOCK_ID, text: "Hi Alex, yes 3 PM works great for me. Looking forward to it!", timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+      { id: 'msg-1-3', senderId: 'organizer-alpha', text: "Perfect, see you then!", timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+    ],
+  },
+  {
+    id: 'convo-2',
+    contactId: 'artist-beta',
+    contactName: 'Serena Vibes',
+    contactAvatar: 'https://placehold.co/40x40.png?text=SV',
+    contactRole: UserType.ARTIST,
+    lastMessagePreview: "Thanks for the offer, I'll review the contract details tonight.",
+    lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+    unreadCount: 1,
+    messages: [
+      { id: 'msg-2-1', senderId: CURRENT_USER_MOCK_ID, text: "Hi Serena, loved your latest track! We'd be thrilled to have you perform at our upcoming 'Indie Fest'. I've sent over a draft contract.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
+      { id: 'msg-2-2', senderId: 'artist-beta', text: "Hey there! That's amazing to hear, thank you! Sounds like a great event.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5).toISOString() },
+      { id: 'msg-2-3', senderId: 'artist-beta', text: "Thanks for the offer, I'll review the contract details tonight.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+    ],
+  },
+  {
+    id: 'convo-3',
+    contactId: 'organizer-gamma',
+    contactName: 'Groove Fest HQ',
+    contactAvatar: 'https://placehold.co/40x40.png?text=GF',
+    contactRole: UserType.ORGANIZER,
+    lastMessagePreview: "Can you send over your tech rider when you get a chance?",
+    lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+    unreadCount: 0,
+    messages: [
+      { id: 'msg-3-1', senderId: 'organizer-gamma', text: "Following up on our discussion for Groove Fest main stage. We're very excited!", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() },
+      { id: 'msg-3-2', senderId: 'organizer-gamma', text: "Can you send over your tech rider when you get a chance?", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+    ],
+  },
+  {
+    id: 'convo-4',
+    contactId: 'artist-delta',
+    contactName: 'Mikey Drums',
+    contactAvatar: 'https://placehold.co/40x40.png?text=MD',
+    contactRole: UserType.ARTIST,
+    lastMessagePreview: "My availability for next month is open. Let me know what dates you're considering.",
+    lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
+    unreadCount: 3,
+    messages: [
+      { id: 'msg-4-1', senderId: 'artist-delta', text: "My availability for next month is open. Let me know what dates you're considering.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
+    ],
+  }
+];
+
+    

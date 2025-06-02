@@ -1,44 +1,244 @@
+
+"use client";
+
+import { useState, useRef, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Construction } from 'lucide-react';
-import Image from 'next/image';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, MessageCircle, Menu } from 'lucide-react';
+import { MOCK_CONVERSATIONS, CURRENT_USER_MOCK_ID, type Conversation, type Message as MessageType } from '@/lib/constants';
+import { useUser } from '@/contexts/UserContext';
+import { format, formatDistanceToNowStrict, isToday, isYesterday } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+
+interface ConversationListItemProps {
+  conversation: Conversation;
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
+function ConversationListItem({ conversation, isSelected, onSelect }: ConversationListItemProps) {
+  const lastMessageDate = new Date(conversation.lastMessageTimestamp);
+  let displayTime;
+  if (isToday(lastMessageDate)) {
+    displayTime = format(lastMessageDate, 'p'); // e.g., 2:30 PM
+  } else if (isYesterday(lastMessageDate)) {
+    displayTime = 'Yesterday';
+  } else {
+    displayTime = format(lastMessageDate, 'MMM d'); // e.g., Jul 20
+  }
+
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "w-full text-left p-3 hover:bg-muted/50 transition-colors rounded-lg flex gap-3 items-start",
+        isSelected && "bg-muted"
+      )}
+    >
+      <Avatar className="h-10 w-10 border">
+        <AvatarImage src={conversation.contactAvatar} alt={conversation.contactName} data-ai-hint="person avatar" />
+        <AvatarFallback>{conversation.contactName.substring(0, 2).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-semibold truncate">{conversation.contactName}</h3>
+          <time className="text-xs text-muted-foreground whitespace-nowrap">{displayTime}</time>
+        </div>
+        <div className="flex justify-between items-center mt-0.5">
+          <p className="text-xs text-muted-foreground truncate flex-1">{conversation.lastMessagePreview}</p>
+          {conversation.unreadCount > 0 && (
+            <Badge variant="default" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+              {conversation.unreadCount}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+interface MessageBubbleProps {
+  message: MessageType;
+  isOwnMessage: boolean;
+  contactAvatar: string;
+  contactName: string;
+}
+
+function MessageBubble({ message, isOwnMessage, contactAvatar, contactName }: MessageBubbleProps) {
+  const messageDate = new Date(message.timestamp);
+  const displayTime = format(messageDate, 'p');
+
+  return (
+    <div className={cn("flex items-end gap-2 mb-4", isOwnMessage ? "justify-end" : "justify-start")}>
+      {!isOwnMessage && (
+        <Avatar className="h-8 w-8 border self-start">
+          <AvatarImage src={contactAvatar} alt={contactName} data-ai-hint="person avatar small" />
+          <AvatarFallback>{contactName.substring(0,1)}</AvatarFallback>
+        </Avatar>
+      )}
+      <div
+        className={cn(
+          "max-w-[70%] p-3 rounded-xl shadow",
+          isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card text-card-foreground rounded-bl-none"
+        )}
+      >
+        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+        <p className={cn("text-xs mt-1", isOwnMessage ? "text-primary-foreground/70 text-right" : "text-muted-foreground/70 text-left")}>
+          {displayTime}
+        </p>
+      </div>
+      {isOwnMessage && (
+         <div className="h-8 w-8 flex-shrink-0"></div>
+      )}
+    </div>
+  );
+}
+
 
 export default function MessagesPage() {
+  const { firebaseUser } = useUser(); // For identifying user's own messages
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS); // Local state for messages
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(scrollToBottom, [selectedConversation?.messages]);
+
+
+  const handleSelectConversation = (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    // Mark messages as read (mock)
+    setConversations(prevConvos => 
+      prevConvos.map(convo => 
+        convo.id === conversationId ? { ...convo, unreadCount: 0 } : convo
+      )
+    );
+  };
+  
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !selectedConversationId) return;
+
+    const message: MessageType = {
+      id: `msg-${Date.now()}`,
+      senderId: firebaseUser?.uid || CURRENT_USER_MOCK_ID, // Use real UID if available
+      text: newMessage.trim(),
+      timestamp: new Date().toISOString(),
+    };
+
+    setConversations(prevConvos =>
+      prevConvos.map(convo =>
+        convo.id === selectedConversationId
+          ? {
+              ...convo,
+              messages: [...convo.messages, message],
+              lastMessagePreview: message.text,
+              lastMessageTimestamp: message.timestamp,
+            }
+          : convo
+      ).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()) // Re-sort by new last message
+    );
+    setNewMessage('');
+    setTimeout(scrollToBottom, 0); // Ensure scroll after state update
+  };
+
   return (
-    <div>
+    <div className="flex flex-col h-[calc(100vh-var(--header-height,100px))]">
       <PageHeader
         title="Messages"
         description="Communicate with artists and event organizers."
       />
-      <Card className="text-center">
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center justify-center">
-            <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-            Integrated Messaging
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-6 py-12">
-          <Construction className="h-24 w-24 text-accent" />
-          <p className="text-xl text-muted-foreground">
-            This feature is currently under construction.
-          </p>
-          <p className="max-w-md">
-            Soon, you'll be able to seamlessly negotiate booking terms and chat directly within MaestroAI.
-            Stay tuned for updates!
-          </p>
-          <div className="relative w-full max-w-sm h-64 mt-4">
-            <Image 
-              src="https://placehold.co/600x400.png" 
-              alt="Messaging interface concept" 
-              layout="fill" 
-              objectFit="contain"
-              data-ai-hint="chat interface"
-            />
+      <Card className="flex-1 flex overflow-hidden">
+        {/* Conversation List - Sidebar */}
+        <div className="w-full md:w-1/3 lg:w-1/4 border-r border-border h-full flex flex-col">
+          <div className="p-4 border-b border-border">
+            <h2 className="text-lg font-semibold font-headline">Chats</h2>
+            {/* Search/Filter can be added here later */}
           </div>
-          <Button variant="outline" disabled>Coming Soon</Button>
-        </CardContent>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {conversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map((convo) => (
+                <ConversationListItem
+                  key={convo.id}
+                  conversation={convo}
+                  isSelected={convo.id === selectedConversationId}
+                  onSelect={() => handleSelectConversation(convo.id)}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Chat View - Main Area */}
+        <div className="flex-1 flex flex-col h-full bg-background">
+          {selectedConversation ? (
+            <>
+              <div className="p-4 border-b border-border flex items-center gap-3">
+                <Avatar className="h-10 w-10 border">
+                   <AvatarImage src={selectedConversation.contactAvatar} alt={selectedConversation.contactName} data-ai-hint="person avatar chat" />
+                   <AvatarFallback>{selectedConversation.contactName.substring(0,2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold font-headline">{selectedConversation.contactName}</h3>
+                  <p className="text-xs text-muted-foreground capitalize">{selectedConversation.contactRole}</p>
+                </div>
+              </div>
+              <ScrollArea className="flex-1 p-4 space-y-4">
+                {selectedConversation.messages.map((msg) => (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    isOwnMessage={msg.senderId === (firebaseUser?.uid || CURRENT_USER_MOCK_ID)}
+                    contactAvatar={selectedConversation.contactAvatar}
+                    contactName={selectedConversation.contactName}
+                  />
+                ))}
+                <div ref={messagesEndRef} />
+              </ScrollArea>
+              <div className="p-4 border-t border-input bg-card">
+                <div className="flex items-center gap-2">
+                  <Textarea
+                    placeholder="Type your message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    rows={1}
+                    className="flex-1 resize-none min-h-[40px]"
+                  />
+                  <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Send</span>
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <MessageCircle className="h-24 w-24 text-muted-foreground/30 mb-4" />
+              <h3 className="text-xl font-semibold text-muted-foreground font-headline">Select a conversation</h3>
+              <p className="text-muted-foreground">Choose one of your existing chats to continue the conversation.</p>
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   );
 }
+
+    
