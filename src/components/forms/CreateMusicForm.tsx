@@ -43,16 +43,22 @@ const instrumentsList = [
 ];
 
 const genreList = [
-  "Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Classical", "Blues", 
-  "Country", "Folk", "Reggae", "R&B", "Soul", "Metal", "Punk", 
-  "Funk", "Disco", "Techno", "House", "Trance", "Ambient", "Lo-fi", 
+  "Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Classical", "Blues",
+  "Country", "Folk", "Reggae", "R&B", "Soul", "Metal", "Punk",
+  "Funk", "Disco", "Techno", "House", "Trance", "Ambient", "Lo-fi",
   "Synthwave", "Orchestral", "World", "Indie"
+].sort();
+
+const moodList = [
+  "Happy", "Sad", "Energetic", "Relaxing", "Chill", "Epic", "Melancholic",
+  "Romantic", "Mysterious", "Dark", "Uplifting", "Peaceful", "Intense",
+  "Groovy", "Nostalgic", "Dreamy", "Experimental"
 ].sort();
 
 
 const formSchema = z.object({
   genre: z.string().min(1, { message: "Please select a genre." }),
-  mood: z.string().min(3, { message: "Mood must be at least 3 characters." }),
+  mood: z.string().min(1, { message: "Please select a mood." }),
   instruments: z.array(z.string()).refine((value) => value.length > 0, {
     message: "Please select at least one instrument.",
   }),
@@ -143,15 +149,24 @@ export default function CreateMusicForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mood</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Chill, Epic, Melancholic" {...field} />
-                    </FormControl>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a mood" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {moodList.map((mood) => (
+                          <SelectItem key={mood} value={mood}>{mood}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="instruments"
