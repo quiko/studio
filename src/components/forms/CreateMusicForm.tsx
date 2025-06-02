@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createMusic, type CreateMusicOutput } from "@/ai/flows/create-music";
@@ -22,10 +23,31 @@ import { useState } from "react";
 import { Loader2, Music2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const instrumentsList = [
+  { id: "piano", label: "Piano" },
+  { id: "acoustic_guitar", label: "Guitar (Acoustic)" },
+  { id: "electric_guitar", label: "Guitar (Electric)" },
+  { id: "bass_guitar", label: "Bass Guitar" },
+  { id: "drums", label: "Drums" },
+  { id: "violin", label: "Violin" },
+  { id: "cello", label: "Cello" },
+  { id: "trumpet", label: "Trumpet" },
+  { id: "saxophone", label: "Saxophone" },
+  { id: "flute", label: "Flute" },
+  { id: "synthesizer", label: "Synthesizer" },
+  { id: "vocals_lead", label: "Vocals (Lead)" },
+  { id: "vocals_backup", label: "Vocals (Backup)" },
+  { id: "strings_ensemble", label: "Strings Ensemble" },
+  { id: "brass_section", label: "Brass Section" },
+  { id: "sampler", label: "Sampler / Sequencer" },
+];
+
 const formSchema = z.object({
   genre: z.string().min(3, { message: "Genre must be at least 3 characters." }),
   mood: z.string().min(3, { message: "Mood must be at least 3 characters." }),
-  instruments: z.string().min(3, { message: "Instruments must be at least 3 characters." }),
+  instruments: z.array(z.string()).refine((value) => value.length > 0, {
+    message: "Please select at least one instrument.",
+  }),
   length: z.string().min(1, { message: "Please select a length." }),
   styleVariation: z.string().optional(),
 });
@@ -40,7 +62,7 @@ export default function CreateMusicForm() {
     defaultValues: {
       genre: "",
       mood: "",
-      instruments: "",
+      instruments: [],
       length: "medium",
       styleVariation: "",
     },
@@ -50,7 +72,11 @@ export default function CreateMusicForm() {
     setIsLoading(true);
     setComposition(null);
     try {
-      const result = await createMusic(values);
+      const submissionValues = {
+        ...values,
+        instruments: values.instruments.join(', '), // Convert array to comma-separated string
+      };
+      const result = await createMusic(submissionValues);
       setComposition(result);
       toast({
         title: "Music Generated!",
@@ -108,20 +134,58 @@ export default function CreateMusicForm() {
                 )}
               />
             </div>
+            
             <FormField
               control={form.control}
               name="instruments"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
-                  <FormLabel>Instruments</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Piano, Guitar, Drums, Synthesizer" {...field} />
-                  </FormControl>
-                  <FormDescription>Comma-separated list of instruments.</FormDescription>
+                  <div className="mb-4">
+                    <FormLabel className="text-base">Instruments</FormLabel>
+                    <FormDescription>
+                      Select the instruments you'd like in your composition.
+                    </FormDescription>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {instrumentsList.map((instrument) => (
+                      <FormField
+                        key={instrument.id}
+                        control={form.control}
+                        name="instruments"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={instrument.id}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(instrument.label)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, instrument.label])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== instrument.label
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {instrument.label}
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <div className="grid md:grid-cols-2 gap-6">
                <FormField
                 control={form.control}
