@@ -168,8 +168,16 @@ export const MOCK_ARTIST_CONTRACTS: ArtistContractItem[] = [
   },
 ];
 
-// For Organizer-created contracts (before PDF/signing)
-export type GeneratedContractStatus = "draft" | "pending_artist_signature" | "pending_organizer_signature" | "signed_by_organizer" | "signed_by_artist" | "active" | "completed" | "cancelled";
+
+export type GeneratedContractStatus = 
+  | "draft" 
+  | "pending_artist_signature" 
+  | "pending_organizer_signature" // May not be used if organizer signs first
+  | "signed_by_organizer" // Could be an interim status
+  | "signed_by_artist" // Could be an interim status
+  | "signed" // Replaces "active" or "completed" for mutual signature
+  | "completed" // For post-event fulfillment tracking
+  | "cancelled";
 
 export type GeneratedContractData = {
   id: string;
@@ -184,9 +192,10 @@ export type GeneratedContractData = {
   clauses: string; // Custom clauses added by organizer
   status: GeneratedContractStatus;
   createdAt: string; // ISO String
+  signedByOrganizer: boolean;
+  signedByArtist: boolean;
   // contractUrl?: string; // Link to PDF in Firebase Storage - for future
-  // signedByOrganizer?: boolean;
-  // signedByArtist?: boolean;
+  // signedByBoth: boolean; // Can be derived from signedByOrganizer && signedByArtist or use status "signed"
 };
 
 

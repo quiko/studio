@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE, type GeneratedContractData } from '@/lib/constants';
+import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE, type GeneratedContractData, type GeneratedContractStatus } from '@/lib/constants';
 
 interface UserContextType {
   firebaseUser: FirebaseUser | null;
@@ -22,7 +22,8 @@ interface UserContextType {
   getArtistProfile: (userId: string) => ArtistProfileData;
   updateArtistProfile: (userId: string, profile: ArtistProfileData) => void;
   organizerContracts: GeneratedContractData[];
-  addOrganizerContract: (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status'>) => void;
+  addOrganizerContract: (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'>) => void;
+  organizerSignsContract: (contractId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -138,14 +139,30 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addOrganizerContract = (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status'>) => {
+  const addOrganizerContract = (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'>) => {
     const newContract: GeneratedContractData = {
       ...contractData,
       id: `contract-${Date.now().toString()}-${Math.random().toString(36).substring(2,7)}`,
       createdAt: new Date().toISOString(),
       status: "draft",
+      signedByOrganizer: false,
+      signedByArtist: false,
     };
     persistOrganizerContracts([...organizerContracts, newContract]);
+  };
+
+  const organizerSignsContract = (contractId: string) => {
+    const updatedContracts = organizerContracts.map(c => {
+      if (c.id === contractId && c.status === 'draft') {
+        return {
+          ...c,
+          status: 'pending_artist_signature' as GeneratedContractStatus,
+          signedByOrganizer: true,
+        };
+      }
+      return c;
+    });
+    persistOrganizerContracts(updatedContracts);
   };
 
 
@@ -158,7 +175,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       logout,
       events, addEvent, updateEvent, deleteEvent, 
       artistProfiles, getArtistProfile, updateArtistProfile,
-      organizerContracts, addOrganizerContract
+      organizerContracts, addOrganizerContract, organizerSignsContract
     }}>
       {children}
     </UserContext.Provider>
