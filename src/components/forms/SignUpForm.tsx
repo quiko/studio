@@ -17,21 +17,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useUser } from '@/contexts/UserContext';
-import { UserType } from '@/lib/constants';
+import { UserType, APP_NAME } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
-import { Building, User, UserPlus } from 'lucide-react';
+import { Building, User, UserPlus, Loader2 } from 'lucide-react';
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 const formSchema = z.object({
-  fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }).optional().or(z.literal('')), // Dummy field
-  email: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')), // Dummy field
-  password: z.string().min(1, { message: "Password is required." }).optional().or(z.literal('')), // Dummy field
-  confirmPassword: z.string().min(1, { message: "Password confirmation is required."}).optional().or(z.literal('')), // Dummy field
+  fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  confirmPassword: z.string().min(6, { message: "Password confirmation is required."}),
   userType: z.nativeEnum(UserType, {
     required_error: "You must select an account type.",
-  }),
-}).refine(data => data.password === data.confirmPassword || data.password === '' || data.confirmPassword === '', { // Allow empty if dummy
+  }).refine(val => val !== UserType.NONE, {message: "Please select a valid account type."}),
+}).refine(data => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
 });
@@ -39,7 +42,7 @@ const formSchema = z.object({
 type SignUpFormValues = z.infer<typeof formSchema>;
 
 export default function SignUpForm() {
-  const { setUserType } = useUser();
+  const { setUserRoleState } = useUser(); 
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -47,36 +50,60 @@ export default function SignUpForm() {
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "", // Dummy
-      email: "", // Dummy
-      password: "", // Dummy
-      confirmPassword: "", //Dummy
-      userType: undefined,
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      userType: undefined, 
     },
   });
 
   async function onSubmit(values: SignUpFormValues) {
-    setIsLoading(true);
-    // Simulate API call for sign-up
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (!values.userType || values.userType === UserType.NONE) {
+    if (!values.userType || values.userType === UserType.NONE) { // Double check, though Zod refine should catch it
         toast({
             title: "Sign Up Failed",
             description: "Please select a valid account type.",
             variant: "destructive",
         });
-        setIsLoading(false);
         return;
     }
-    
-    setUserType(values.userType);
-    toast({
-        title: "Account Created!",
-        description: `Welcome to ${UserType.NONE}, ${values.userType}!`, // APP_NAME is not directly available here
-    });
-    router.push('/dashboard');
-    setIsLoading(false);
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const firebaseUser = userCredential.user;
+
+      await setDoc(doc(db, "users", firebaseUser.uid), {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        fullName: values.fullName,
+        role: values.userType,
+        createdAt: new Date().toISOString(),
+      });
+      
+      setUserRoleState(values.userType); 
+
+      toast({
+          title: "Account Created!",
+          description: `Welcome to ${APP_NAME}, ${values.fullName}! Redirecting to dashboard...`,
+      });
+      router.push('/dashboard');
+
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      let errorMessage = "Failed to create account. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "This email address is already in use.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "The password is too weak. It must be at least 6 characters.";
+      }
+      toast({
+          title: "Sign Up Failed",
+          description: errorMessage,
+          variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -87,11 +114,10 @@ export default function SignUpForm() {
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name (Demo)</FormLabel>
+              <FormLabel>Full Name</FormLabel>
               <FormControl>
                 <Input placeholder="Your Name" {...field} />
               </FormControl>
-              <FormDescription>This is a demo. No actual data is stored.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -101,7 +127,7 @@ export default function SignUpForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email (Demo)</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input type="email" placeholder="you@example.com" {...field} />
               </FormControl>
@@ -114,7 +140,7 @@ export default function SignUpForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password (Demo)</FormLabel>
+              <FormLabel>Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -127,7 +153,7 @@ export default function SignUpForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password (Demo)</FormLabel>
+              <FormLabel>Confirm Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -143,7 +169,7 @@ export default function SignUpForm() {
               <FormLabel>I want to sign up as:</FormLabel>
               <FormControl>
                 <RadioGroup
-                  onValueChange={field.onChange}
+                  onValueChange={(value) => field.onChange(value as UserType)}
                   defaultValue={field.value}
                   className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4"
                 >
@@ -172,7 +198,8 @@ export default function SignUpForm() {
           )}
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Creating Account..." : <><UserPlus className="mr-2 h-5 w-5" /> Sign Up</>}
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
+          Sign Up
         </Button>
       </form>
     </Form>

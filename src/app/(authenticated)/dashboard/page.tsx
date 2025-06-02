@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser } from '@/contexts/UserContext';
@@ -8,7 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-  const { userType, isLoading } = useUser();
+  const { userRole, isLoading } = useUser(); // Changed from userType
 
   if (isLoading) {
     return (
@@ -24,16 +25,21 @@ export default function DashboardPage() {
     );
   }
   
-  const dashboardTitle = userType === UserType.ORGANIZER ? "Organizer Dashboard" : "Artist Dashboard";
-  const dashboardDescription = userType === UserType.ORGANIZER 
+  const dashboardTitle = userRole === UserType.ORGANIZER ? "Organizer Dashboard" : "Artist Dashboard";
+  const dashboardDescription = userRole === UserType.ORGANIZER 
     ? "Manage your events and find talented artists." 
     : "Showcase your talent and create music with AI.";
 
   return (
     <div>
       <PageHeader title={dashboardTitle} description={dashboardDescription} />
-      {userType === UserType.ORGANIZER && <OrganizerDashboard />}
-      {userType === UserType.ARTIST && <ArtistDashboard />}
+      {userRole === UserType.ORGANIZER && <OrganizerDashboard />}
+      {userRole === UserType.ARTIST && <ArtistDashboard />}
+      {userRole === UserType.NONE && (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">Unable to determine user role. Please try logging out and back in.</p>
+        </div>
+      )}
     </div>
   );
 }

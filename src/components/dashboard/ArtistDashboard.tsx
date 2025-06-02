@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -9,8 +10,10 @@ import { UserType } from '@/lib/constants';
 import Image from 'next/image';
 
 export default function ArtistDashboard() {
-  const { getArtistProfile } = useUser();
-  const profile = getArtistProfile(UserType.ARTIST);
+  const { getArtistProfile, firebaseUser } = useUser();
+  
+  // Profile is now keyed by Firebase UID
+  const profile = firebaseUser ? getArtistProfile(firebaseUser.uid) : { ...DEFAULT_ARTIST_PROFILE, name: "Your Artist Name" };
 
   return (
     <div className="grid gap-6">
@@ -76,3 +79,4 @@ export default function ArtistDashboard() {
     </div>
   );
 }
+

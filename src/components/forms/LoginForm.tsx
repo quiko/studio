@@ -8,33 +8,31 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useUser } from '@/contexts/UserContext';
-import { UserType } from '@/lib/constants';
+import { UserType } from '@/lib/constants'; // UserType still used for UI selection if needed, but role comes from Firestore
 import { useRouter } from 'next/navigation';
-import { Building, User, LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')), // Dummy field
-  password: z.string().min(1, { message: "Password is required." }).optional().or(z.literal('')), // Dummy field
-  userType: z.nativeEnum(UserType, {
-    required_error: "You must select a user type.",
-  }),
+  email: z.string().email({ message: "Please enter a valid email." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
 
 type LoginFormValues = z.infer<typeof formSchema>;
 
 export default function LoginForm() {
-  const { setUserType } = useUser();
+  const { setUserRoleState } = useUser(); // To manually set role after Firestore fetch
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -42,34 +40,48 @@ export default function LoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "", // Dummy
-      password: "", // Dummy
-      userType: undefined,
+      email: "",
+      password: "",
     },
   });
 
   async function onSubmit(values: LoginFormValues) {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const firebaseUser = userCredential.user;
 
-    if (!values.userType || values.userType === UserType.NONE) {
+      // Fetch role from Firestore
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        setUserRoleState(userData.role as UserType || UserType.NONE); // Update context
         toast({
-            title: "Login Failed",
-            description: "Please select a valid user type.",
-            variant: "destructive",
+            title: "Login Successful!",
+            description: `Welcome back!`,
         });
-        setIsLoading(false);
-        return;
-    }
+        router.push('/dashboard');
+      } else {
+        // Should not happen if signup process is correct
+        throw new Error("User role not found.");
+      }
 
-    setUserType(values.userType);
-    toast({
-        title: "Login Successful!",
-        description: `Welcome back, ${values.userType}!`,
-    });
-    router.push('/dashboard');
-    setIsLoading(false);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      let errorMessage = "Failed to log in. Please check your credentials.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password.";
+      }
+      toast({
+          title: "Login Failed",
+          description: errorMessage,
+          variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -80,11 +92,10 @@ export default function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email (Demo)</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input type="email" placeholder="you@example.com" {...field} />
               </FormControl>
-              <FormDescription>This is a demo. No actual email check is performed.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -94,53 +105,17 @@ export default function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password (Demo)</FormLabel>
+              <FormLabel>Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
-              </FormControl>
-               <FormDescription>This is a demo. No actual password check.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="userType"
-          render={({ field }) => (
-            <FormItem className="space-y-3">
-              <FormLabel>Log in as:</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4"
-                >
-                  <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value={UserType.ORGANIZER} id="organizer" />
-                    </FormControl>
-                    <FormLabel htmlFor="organizer" className="font-normal flex items-center">
-                      <Building className="mr-2 h-5 w-5 text-muted-foreground" />
-                      Event Organizer
-                    </FormLabel>
-                  </FormItem>
-                  <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value={UserType.ARTIST} id="artist" />
-                    </FormControl>
-                    <FormLabel htmlFor="artist" className="font-normal flex items-center">
-                      <User className="mr-2 h-5 w-5 text-muted-foreground" />
-                      Artist
-                    </FormLabel>
-                  </FormItem>
-                </RadioGroup>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Logging in..." : <><LogIn className="mr-2 h-5 w-5" /> Log In</>}
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
+           Log In
         </Button>
       </form>
     </Form>

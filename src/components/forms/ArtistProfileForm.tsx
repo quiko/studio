@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/contexts/UserContext";
-import { UserType, type ArtistProfileData } from "@/lib/constants";
+import { UserType, type ArtistProfileData, DEFAULT_ARTIST_PROFILE } from "@/lib/constants";
 import { useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +28,7 @@ const formSchema = z.object({
   genre: z.string().min(3, { message: "Genre must be at least 3 characters." }),
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio portfolio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video portfolio." }).optional().or(z.literal('')),
-  reviews: z.string().optional(), // For now, just a text field
+  reviews: z.string().optional(), 
   indicativeRates: z.string().min(1, { message: "Indicative rates are required (e.g., $$, negotiable)." }),
   profileImage: z.string().url({ message: "Please enter a valid URL for profile image." }).optional().or(z.literal('')),
 });
@@ -35,22 +36,30 @@ const formSchema = z.object({
 type ArtistProfileFormValues = z.infer<typeof formSchema>;
 
 export default function ArtistProfileForm() {
-  const { getArtistProfile, updateArtistProfile, userType } = useUser();
+  const { getArtistProfile, updateArtistProfile, firebaseUser, userRole } = useUser();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [currentProfileImage, setCurrentProfileImage] = useState("https://placehold.co/150x150.png");
 
+  const defaultFormValues = firebaseUser && userRole === UserType.ARTIST
+    ? getArtistProfile(firebaseUser.uid)
+    : { ...DEFAULT_ARTIST_PROFILE, name: firebaseUser?.displayName || "Artist Name" };
 
   const form = useForm<ArtistProfileFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: getArtistProfile(UserType.ARTIST), // Assuming logged in as ARTIST
+    defaultValues: defaultFormValues,
   });
   
   useEffect(() => {
-    const profile = getArtistProfile(UserType.ARTIST);
-    form.reset(profile);
-    setCurrentProfileImage(profile.profileImage || "https://placehold.co/150x150.png");
-  }, [getArtistProfile, form, userType]);
+    if (firebaseUser && userRole === UserType.ARTIST) {
+      const profile = getArtistProfile(firebaseUser.uid);
+      form.reset(profile); // Reset form with fetched profile data
+      setCurrentProfileImage(profile.profileImage || "https://placehold.co/150x150.png");
+    } else {
+       form.reset({ ...DEFAULT_ARTIST_PROFILE, name: firebaseUser?.displayName || "Artist Name" });
+       setCurrentProfileImage("https://placehold.co/150x150.png");
+    }
+  }, [firebaseUser, userRole, getArtistProfile, form]);
 
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -61,15 +70,14 @@ export default function ArtistProfileForm() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-
   async function onSubmit(values: ArtistProfileFormValues) {
-    if (userType !== UserType.ARTIST) {
-      toast({ title: "Error", description: "Only artists can update profiles.", variant: "destructive"});
+    if (userRole !== UserType.ARTIST || !firebaseUser) {
+      toast({ title: "Error", description: "Only authenticated artists can update profiles.", variant: "destructive"});
       return;
     }
     setIsLoading(true);
     try {
-      updateArtistProfile(UserType.ARTIST, values as ArtistProfileData);
+      updateArtistProfile(firebaseUser.uid, values as ArtistProfileData); // Use UID as key
       toast({ title: "Profile Updated", description: "Your artist profile has been saved." });
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -78,6 +86,15 @@ export default function ArtistProfileForm() {
       setIsLoading(false);
     }
   }
+  
+  if (userRole !== UserType.ARTIST) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">This page is for artists only.</p>
+      </div>
+    );
+  }
+
 
   return (
     <Form {...form}>
@@ -186,7 +203,7 @@ export default function ArtistProfileForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || !firebaseUser}>
            {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (

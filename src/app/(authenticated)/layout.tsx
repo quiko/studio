@@ -2,6 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
+import { useEffect } from 'react'; // Added useEffect
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
@@ -25,32 +26,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  const { userType, setUserType, isLoading } = useUser();
+  const { firebaseUser, userRole, isLoading, logout } = useUser(); // Changed to firebaseUser, userRole
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // If loading is finished and there's no user type, redirect to login.
-    // This check ensures we don't redirect during initial load or if already on login/signup.
-    if (!isLoading && userType === UserType.NONE && pathname !== '/login' && pathname !== '/signup') {
+    if (!isLoading && !firebaseUser && pathname !== '/login' && pathname !== '/signup') {
       router.push('/login');
     }
-  }, [isLoading, userType, router, pathname]);
+  }, [isLoading, firebaseUser, router, pathname]);
 
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        {/* You can put a more sophisticated global loader here */}
         <Skeleton className="h-12 w-12 rounded-full bg-muted" />
         <Skeleton className="h-4 w-[250px] ml-4 bg-muted" />
       </div>
     );
   }
 
-  // If still no user type after loading (and redirect hasn't happened yet or is in progress),
-  // show a minimal loading state or null to prevent flashing content.
-  if (userType === UserType.NONE) {
+  if (!firebaseUser) {
      return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-muted-foreground">Redirecting to login...</p>
@@ -58,15 +54,15 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     );
   }
   
-
-  const handleLogout = () => {
-    setUserType(UserType.NONE);
-    router.push('/login'); // Redirect to login page after logout
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login'); 
   };
 
-  const filteredNavItems = NAV_ITEMS.filter(item => item.allowedUsers.includes(userType));
+  const filteredNavItems = NAV_ITEMS.filter(item => item.allowedUsers.includes(userRole));
   
-  const userInitial = userType === UserType.ARTIST ? 'A' : userType === UserType.ORGANIZER ? 'O' : 'U';
+  const userInitial = firebaseUser?.email?.charAt(0).toUpperCase() || (userRole === UserType.ARTIST ? 'A' : userRole === UserType.ORGANIZER ? 'O' : 'U');
+  const userRoleDisplay = userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
   return (
     <SidebarProvider defaultOpen>
@@ -98,13 +94,13 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
         <SidebarFooter className="p-4">
            <div className="flex items-center gap-2 mb-2">
             <Avatar>
-              <AvatarImage src={`https://placehold.co/40x40.png?text=${userInitial}`} alt={userType} data-ai-hint="abstract initial"/>
+              <AvatarImage src={`https://placehold.co/40x40.png?text=${userInitial}`} alt={userRoleDisplay} data-ai-hint="abstract initial"/>
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="text-sm font-medium capitalize">{userType}</span>
+              <span className="text-sm font-medium capitalize">{userRoleDisplay}</span>
               <span className="text-xs text-muted-foreground">
-                {userType === UserType.ARTIST ? "Artist View" : "Organizer View"}
+                {firebaseUser.email}
               </span>
             </div>
           </div>
@@ -117,7 +113,6 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:py-4">
           <SidebarTrigger className="md:hidden" />
-          {/* Breadcrumbs or other header content can go here */}
         </header>
         <main className="flex-1 p-4 md:p-6">
           {children}
@@ -126,4 +121,3 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     </SidebarProvider>
   );
 }
-
