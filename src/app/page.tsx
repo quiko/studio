@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { APP_NAME } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Home, Users, Info, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react'; // Changed Album to Info
+import { Home, Users, Lightbulb, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react'; // Changed Info to Lightbulb
 import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo';
 
 export default function LandingPage() {
@@ -72,7 +72,7 @@ export default function LandingPage() {
             <span className="text-xs mt-0.5">Artists</span>
           </Link>
           <Link href="/how-it-works" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
-            <Info className="h-5 w-5 sm:h-6 sm:w-6" />
+            <Lightbulb className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-xs mt-0.5">How it works</span>
           </Link>
           <Link href="#" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
