@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
-import { FilePlus2, Loader2, Save } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Save, UserSearch } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -25,11 +25,12 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/contexts/UserContext";
-import type { GeneratedContractData } from "@/lib/constants";
+import type { GeneratedContractData, ArtistProfileData } from "@/lib/constants";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const formSchema = z.object({
-  organizerName: z.string().min(1, { message: "Organizer name is pre-filled." }), // Should be pre-filled
-  artistName: z.string().min(2, { message: "Artist name is required." }),
+  organizerName: z.string().min(1, { message: "Organizer name is pre-filled." }),
+  artistName: z.string().min(2, { message: "Artist name is required." }), // This will be the display name
   eventName: z.string().min(3, { message: "Event name is required." }),
   eventDate: z.date({ required_error: "Event date is required." }),
   eventLocation: z.string().min(3, { message: "Event location is required." }),
@@ -39,10 +40,21 @@ const formSchema = z.object({
 
 type CreateContractFormValues = z.infer<typeof formSchema>;
 
-export default function CreateContractForm() {
-  const { firebaseUser, addOrganizerContract } = useUser();
+interface SuggestionArtist extends ArtistProfileData {
+  id: string; // Firebase UID
+}
+
+export default function CreateContractForm(): JSX.Element {
+  const { firebaseUser, addOrganizerContract, artistProfiles: allArtistProfilesMap } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const [artistSearchTerm, setArtistSearchTerm] = useState("");
+  const [artistSuggestions, setArtistSuggestions] = useState<SuggestionArtist[]>([]);
+  const [showArtistSuggestions, setShowArtistSuggestions] = useState(false);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
 
   const form = useForm<CreateContractFormValues>({
     resolver: zodResolver(formSchema),
@@ -63,6 +75,44 @@ export default function CreateContractForm() {
     }
   }, [firebaseUser, form]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowArtistSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [suggestionsRef]);
+
+  const handleArtistSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setArtistSearchTerm(term);
+    form.setValue("artistName", term); // Keep react-hook-form updated
+    setSelectedArtistId(null); // Clear selected artist if user types
+
+    if (term.length > 1) {
+      const profilesArray: SuggestionArtist[] = Object.entries(allArtistProfilesMap)
+        .map(([id, profile]) => ({ ...profile, id }))
+        .filter(profile => profile.name.toLowerCase().includes(term.toLowerCase()));
+      setArtistSuggestions(profilesArray);
+      setShowArtistSuggestions(true);
+    } else {
+      setArtistSuggestions([]);
+      setShowArtistSuggestions(false);
+    }
+  };
+
+  const handleArtistSuggestionClick = (artist: SuggestionArtist) => {
+    setArtistSearchTerm(artist.name);
+    form.setValue("artistName", artist.name); // Update react-hook-form
+    setSelectedArtistId(artist.id);
+    setArtistSuggestions([]);
+    setShowArtistSuggestions(false);
+  };
+
 
   async function onSubmit(values: CreateContractFormValues) {
     if (!firebaseUser) {
@@ -71,11 +121,11 @@ export default function CreateContractForm() {
     }
     setIsLoading(true);
     
-    const newContractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status'> = {
+    const newContractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'> = {
         organizerId: firebaseUser.uid,
         organizerName: values.organizerName,
-        artistName: values.artistName,
-        // artistId will be undefined for now
+        artistName: values.artistName, // This is the name from the input/selection
+        artistId: selectedArtistId || undefined, // Use the stored ID
         eventName: values.eventName,
         eventDate: values.eventDate.toISOString(),
         eventLocation: values.eventLocation,
@@ -84,7 +134,6 @@ export default function CreateContractForm() {
     };
 
     try {
-      // For now, add to local state via UserContext
       addOrganizerContract(newContractData);
       
       toast({
@@ -92,21 +141,23 @@ export default function CreateContractForm() {
         description: `Draft for "${values.eventName}" with ${values.artistName} has been saved.`,
       });
       form.reset({
-        ...form.getValues(), // Keep organizer name
+        organizerName: firebaseUser.displayName || firebaseUser.email || "",
         artistName: "",
         eventName: "",
         eventDate: undefined,
         eventLocation: "",
         fee: "",
         clauses: "Standard performance terms apply. Payment due upon completion. Cancellation policy: 14 days notice.",
-      }); // Reset form after successful submission
+      });
+      setArtistSearchTerm("");
+      setSelectedArtistId(null);
     } catch (error) {
         console.error("Error creating contract draft:", error);
         toast({ title: "Error", description: "Could not save contract draft.", variant: "destructive"})
     } finally {
         setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Form {...form}>
@@ -116,9 +167,52 @@ export default function CreateContractForm() {
         )} />
         
         <div className="grid md:grid-cols-2 gap-6">
-            <FormField control={form.control} name="artistName" render={({ field }) => (
-            <FormItem><FormLabel>Artist Name</FormLabel><FormControl><Input placeholder="Enter Artist's Full Name or Stage Name" {...field} /></FormControl><FormDescription>Artist ID will be linked if they are on the platform.</FormDescription><FormMessage /></FormItem>
+            <FormField
+              control={form.control}
+              name="artistName"
+              render={({ field }) 
+              => (
+              <FormItem>
+                <FormLabel>Artist Name</FormLabel>
+                <div className="relative" ref={suggestionsRef}>
+                  <FormControl>
+                    <div className="relative">
+                        <UserSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                        placeholder="Search for registered artists..."
+                        value={artistSearchTerm}
+                        onChange={handleArtistSearchChange}
+                        onFocus={() => artistSearchTerm.length > 1 && setShowArtistSuggestions(true)}
+                        className="pl-10"
+                        />
+                    </div>
+                  </FormControl>
+                  {showArtistSuggestions && artistSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {artistSuggestions.map((artist) => (
+                        <div
+                          key={artist.id}
+                          className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => handleArtistSuggestionClick(artist)}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={artist.profileImage || 'https://placehold.co/40x40.png'} alt={artist.name} data-ai-hint="artist avatar"/>
+                            <AvatarFallback>{artist.name.substring(0,1).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{artist.name}</p>
+                            <p className="text-xs text-muted-foreground">{artist.genre}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <FormDescription>Search or type artist name. If not found, the entered name will be used.</FormDescription>
+                <FormMessage />
+              </FormItem>
             )} />
+
             <FormField control={form.control} name="eventName" render={({ field }) => (
             <FormItem><FormLabel>Event Name</FormLabel><FormControl><Input placeholder="e.g., Annual Charity Gala" {...field} /></FormControl><FormMessage /></FormItem>
             )} />

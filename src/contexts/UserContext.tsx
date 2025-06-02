@@ -18,7 +18,7 @@ interface UserContextType {
   addEvent: (event: Omit<EventItem, 'id'>) => void;
   updateEvent: (event: EventItem) => void;
   deleteEvent: (eventId: string) => void;
-  artistProfiles: Record<string, ArtistProfileData>;
+  artistProfiles: Record<string, ArtistProfileData>; // Keyed by Firebase UID
   getArtistProfile: (userId: string) => ArtistProfileData;
   updateArtistProfile: (userId: string, profile: ArtistProfileData) => void;
   organizerContracts: GeneratedContractData[];
@@ -67,6 +67,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
           setUserRole(userData.role as UserType || UserType.NONE);
+          // Load user-specific artist profile if user is an artist
+          if (userData.role === UserType.ARTIST) {
+             const profile = localStorage.getItem(`${LOCAL_STORAGE_KEY_ARTIST_PROFILES}_${user.uid}`);
+             if (profile) {
+                setArtistProfiles(prev => ({...prev, [user.uid]: JSON.parse(profile)}));
+             }
+          }
         } else {
           setUserRole(UserType.NONE); 
         }
@@ -117,15 +124,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     persistEvents(events.filter(event => event.id !== eventId));
   };
   
-  const persistArtistProfiles = (updatedProfiles: Record<string, ArtistProfileData>) => {
+ const persistArtistProfiles = (updatedProfiles: Record<string, ArtistProfileData>) => {
     setArtistProfiles(updatedProfiles);
     if (typeof window !== 'undefined') {
+      // Store all profiles under a general key
       localStorage.setItem(LOCAL_STORAGE_KEY_ARTIST_PROFILES, JSON.stringify(updatedProfiles));
+      // Additionally, if a specific user is logged in and is an artist, store their profile separately
+      if (firebaseUser && userRole === UserType.ARTIST && updatedProfiles[firebaseUser.uid]) {
+         localStorage.setItem(`${LOCAL_STORAGE_KEY_ARTIST_PROFILES}_${firebaseUser.uid}`, JSON.stringify(updatedProfiles[firebaseUser.uid]));
+      }
     }
   };
 
   const getArtistProfile = (userId: string): ArtistProfileData => {
-    return artistProfiles[userId] || { ...DEFAULT_ARTIST_PROFILE, name: "Artist Profile" };
+    return artistProfiles[userId] || { ...DEFAULT_ARTIST_PROFILE, name: firebaseUser?.displayName || "Artist Profile" };
   };
 
   const updateArtistProfile = (userId: string, profile: ArtistProfileData) => {
@@ -189,3 +201,5 @@ export const useUser = (): UserContextType => {
   }
   return context;
 };
+
+    
