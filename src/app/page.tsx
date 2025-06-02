@@ -53,14 +53,6 @@ export default function LandingPage() {
           data-ai-hint="music concert crowd"
         />
       </div>
-
-      <div className="absolute bottom-[28%] md:bottom-1/4 left-8 md:left-16 lg:left-24 w-28 h-28 md:w-32 md:h-32 z-10 flex flex-col items-center justify-center">
-        <div className="w-24 h-24 md:w-28 md:h-28 border-2 border-primary rounded-full flex items-center justify-center p-2">
-          <p className="text-primary uppercase text-[0.6rem] md:text-xs leading-tight text-center font-medium tracking-wider">
-            Scroll <br /> To <br /> Explore
-          </p>
-        </div>
-      </div>
       
       <Link href="#" className="absolute bottom-6 right-6 md:bottom-8 md:right-8 text-sm text-muted-foreground hover:text-primary z-20 flex items-center group">
         <BookOpen className="mr-1.5 h-4 w-4" /> Wiki
