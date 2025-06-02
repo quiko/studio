@@ -14,7 +14,7 @@ export interface NavItem {
   allowedUsers: UserType[];
 }
 
-export const APP_NAME = "Kurate";
+export const APP_NAME = "OBSESSION";
 
 export const NAV_ITEMS: NavItem[] = [
   {

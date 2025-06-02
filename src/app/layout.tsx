@@ -6,7 +6,7 @@ import { APP_NAME } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: 'AI-powered tools for event organizers and musicians, reimagined by Kurate.',
+  description: 'AI-powered tools for event organizers and musicians, reimagined by OBSESSION.',
 };
 
 export default function RootLayout({

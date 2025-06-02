@@ -4,6 +4,7 @@ import { APP_NAME } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Home, Info, Users, Album, Mail, UserCircle, ArrowRight, BookOpen } from 'lucide-react';
+import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo';
 
 export default function LandingPage() {
   return (
@@ -36,9 +37,7 @@ export default function LandingPage() {
       </div>
 
       <header className="relative z-10 flex flex-col items-center text-center my-auto">
-        <h1 className="text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] font-headline font-bold text-foreground select-none">
-          {APP_NAME}
-        </h1>
+        <ObsessionFullTextLogo className="text-foreground w-auto h-20 sm:h-24 md:h-32 lg:h-40 select-none" />
         <p className="mt-2 md:mt-4 text-base md:text-lg text-muted-foreground max-w-md">
           (Body Text) Discover, create, and connect. The future of music curation.
         </p>
@@ -64,9 +63,9 @@ export default function LandingPage() {
             <Home className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-xs mt-0.5">Home</span>
           </Link>
-          <Link href="#" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
-            <Info className="h-5 w-5 sm:h-6 sm:w-6" />
-            <span className="text-xs mt-0.5">About</span>
+          <Link href="/dashboard" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
+            <UserCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="text-xs mt-0.5">Login</span>
           </Link>
           <Link href="#" className="flex flex-col items-center text-muted-foreground hover:text-foreground transition-colors p-1.5 sm:p-2 rounded-md">
             <Users className="h-5 w-5 sm:h-6 sm:w-6" />

@@ -38,10 +38,21 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   }
 
   if (userType === UserType.NONE) {
-    if (typeof window !== 'undefined') router.push('/');
+    // Redirect on client-side only
+    if (typeof window !== 'undefined') {
+       // Check if current path is already the landing page to avoid redirect loop
+      if (pathname !== '/') {
+        router.push('/');
+      } else {
+        // If already on landing page and no user type, it might be initial load or post-logout.
+        // We can show a minimal loading/selector state or just let the landing page render.
+        // For now, let UserTypeSelector on '/' handle it.
+      }
+    }
+     // Render nothing or a loader while redirecting or if on '/'
     return (
-       <div className="flex items-center justify-center min-h-screen">
-        <p>Redirecting to login...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
       </div>
     );
   }

@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
-import { Music3 } from 'lucide-react';
+import { ObsessionIcon } from './ObsessionIcon';
 
 export function LogoIcon(props: SVGProps<SVGSVGElement>) {
-  return <Music3 {...props} />;
+  return <ObsessionIcon {...props} />;
 }
