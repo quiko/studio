@@ -4,13 +4,13 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey:"AIzaSyBExL4Z4DG4kROgtnoeRV3ACgWGpxMxzA0",
-  authDomain:"maestroai-byliq.firebaseapp.com",
-  projectId:"maestroai-byliq",
-  storageBucket:"maestroai-byliq.firebasestorage.app",
-  messagingSenderId:"116231535273",
-  appId:"1:116231535273:web:50ff97addec4d2be4087b8",
-  // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
+  apiKey: "AIzaSyDxHFkFJGH_igiXW_0RM7S8Na1jt7wyvFg",
+  authDomain: "obsession-music-ai-2a20f.firebaseapp.com",
+  projectId: "obsession-music-ai-2a20f",
+  storageBucket: "obsession-music-ai-2a20f.appspot.com", // Standard .appspot.com, corrected from .firebasestorage.app
+  messagingSenderId: "989087866304",
+  appId: "1:989087866304:web:3d3138d219d0428947bc25",
+  measurementId: "G-N11JX6GGDV"
 };
 
 let app: FirebaseApp;
