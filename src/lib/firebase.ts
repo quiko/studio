@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDxHFkFJGH_igiXW_0RM7S8Na1jt7wyvFg",
   authDomain: "obsession-music-ai-2a20f.firebaseapp.com",
   projectId: "obsession-music-ai-2a20f",
-  storageBucket: "obsession-music-ai-2a20f.appspot.com", // Standard .appspot.com, corrected from .firebasestorage.app
+  storageBucket: "obsession-music-ai-2a20f.appspot.com", // Standard .appspot.com format
   messagingSenderId: "989087866304",
   appId: "1:989087866304:web:3d3138d219d0428947bc25",
   measurementId: "G-N11JX6GGDV"
