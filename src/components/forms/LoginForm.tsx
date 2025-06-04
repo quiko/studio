@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useUser } from '@/contexts/UserContext';
-import { UserType } from '@/lib/constants'; // UserType still used for UI selection if needed, but role comes from Firestore
+import { UserType } from '@/lib/constants'; 
 import { useRouter } from 'next/navigation';
 import { LogIn, Loader2 } from 'lucide-react';
 import { useState } from "react";
@@ -32,7 +32,7 @@ const formSchema = z.object({
 type LoginFormValues = z.infer<typeof formSchema>;
 
 export default function LoginForm() {
-  const { setUserRoleState } = useUser(); // To manually set role after Firestore fetch
+  const { setUserRoleState } = useUser(); 
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,29 +51,44 @@ export default function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const firebaseUser = userCredential.user;
 
-      // Fetch role from Firestore
       const userDocRef = doc(db, "users", firebaseUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        setUserRoleState(userData.role as UserType || UserType.NONE); // Update context
+        setUserRoleState(userData.role as UserType || UserType.NONE); 
         toast({
             title: "Login Successful!",
             description: `Welcome back!`,
         });
         router.push('/dashboard');
       } else {
-        // Should not happen if signup process is correct
         throw new Error("User role not found.");
       }
 
     } catch (error: any) {
-      console.error("Login error:", error);
       let errorMessage = "Failed to log in. Please check your credentials.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password.";
+      let isKnownAuthError = false;
+
+      if (error.code === 'auth/user-not-found' || 
+          error.code === 'auth/wrong-password' || 
+          error.code === 'auth/invalid-credential' ||
+          error.code === 'auth/invalid-email' ||
+          error.code === 'auth/user-disabled'
+          ) {
+        errorMessage = "Invalid email or password. Please try again or sign up.";
+        isKnownAuthError = true;
+      } else if (error.message === "User role not found.") {
+        errorMessage = "Login successful, but user role could not be determined. Please contact support.";
       }
+      
+
+      if (isKnownAuthError) {
+        console.warn("Login attempt failed (known auth error):", error.code);
+      } else {
+        console.error("Login error (unexpected):", error); 
+      }
+      
       toast({
           title: "Login Failed",
           description: errorMessage,
