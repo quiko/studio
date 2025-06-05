@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, CalendarDays, Users, Sparkles, Music2, UserCircle, MessageSquare, FileText, Search } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Users, Sparkles, Music2, UserCircle, MessageSquare, FileText, Search, BarChart } from 'lucide-react';
 
 export enum UserType {
   ORGANIZER = 'organizer',
@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label: 'Suggest Artists',
     href: '/dashboard/suggest-artists',
-    icon: Users,
+    icon: Users, // Using Users icon as per previous implementation for suggestions
     allowedUsers: [UserType.ORGANIZER],
   },
   {
@@ -53,6 +53,12 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/create-music',
     icon: Music2,
     allowedUsers: [UserType.ARTIST],
+  },
+  {
+    label: 'Music Industry Analytics',
+    href: '/dashboard/analytics',
+    icon: BarChart,
+    allowedUsers: [UserType.ORGANIZER, UserType.ARTIST],
   },
   {
     label: 'Messages',
