@@ -42,6 +42,9 @@ Instructions:
 Ensure your output is a JSON object conforming to the SynthesizeVocalsOutputSchema.
 Example of 'synthesisDescription': "The synthesized vocal is a warm, baritone male voice with a slight gravelly texture, reminiscent of a classic soul singer. It delivers the opening lines with a gentle, breathy quality, building in intensity for the chorus to convey a powerful sense of longing as per the 'Melancholic' emotional tone. The phrasing is smooth and connected, with subtle vibrato on sustained notes. If a reference audio (e.g., of a classic soul singer) was provided, one might imagine this synthesized voice capturing the essence of that era's vocal expressiveness by emphasizing similar breath control or melodic embellishments, while still maintaining its unique synthesized character."
 `,
+  config: {
+    temperature: 0, // Set temperature to 0 for more deterministic output
+  }
 });
 
 const synthesizeVocalsFlow = ai.defineFlow(
@@ -55,3 +58,4 @@ const synthesizeVocalsFlow = ai.defineFlow(
     return output!;
   }
 );
+
