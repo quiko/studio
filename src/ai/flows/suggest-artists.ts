@@ -19,7 +19,7 @@ const SuggestArtistsInputSchema = z.object({
     .string()
     .describe('The preferred music genre for the event.'),
   specificEventDate: z.date().describe('The specific date for the event.').optional(),
-  eventTimeOfDay: z.string().describe('The desired time of day for the event (e.g., Evening, Afternoon, or a specific hourly range like "08:00 AM - 09:00 AM").').optional(),
+  eventTimeOfDay: z.string().describe('The desired time of day for the event (e.g., Evening, Afternoon, or a specific hourly range like "08:00 - 09:00", "23:00 - 00:00", or "Any Time").').optional(),
   numberOfGuests: z.string().describe('The estimated number of guests (e.g., 50-100, 250+).').optional(),
   additionalDetails: z
     .string()
