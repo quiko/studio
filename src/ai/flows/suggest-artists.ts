@@ -18,12 +18,12 @@ const SuggestArtistsInputSchema = z.object({
   musicGenrePreference: z
     .string()
     .describe('The preferred music genre for the event.'),
-  eventTimeframe: z.string().describe('The desired timeframe for the event (e.g., Next Month, Specific Weekend).').optional(),
-  eventTimeOfDay: z.string().describe('The desired time of day for the event (e.g., Evening, Afternoon).').optional(),
+  specificEventDate: z.date().describe('The specific date for the event.').optional(),
+  eventTimeOfDay: z.string().describe('The desired time of day for the event (e.g., Evening, Afternoon, or a specific hour like 19:00 or 7:00 PM).').optional(),
   numberOfGuests: z.string().describe('The estimated number of guests (e.g., 50-100, 250+).').optional(),
   additionalDetails: z
     .string()
-    .describe('Any other relevant details about the event, such as specific date if not covered by timeframe, exact location, desired atmosphere.').optional(),
+    .describe('Any other relevant details about the event, such as exact location if not implied by general area, desired atmosphere not covered by other fields.').optional(),
 });
 export type SuggestArtistsInput = z.infer<typeof SuggestArtistsInputSchema>;
 
@@ -51,8 +51,8 @@ const prompt = ai.definePrompt({
   Event Type: {{{eventType}}}
   Budget Range: {{{budgetRange}}}
   Music Genre Preference: {{{musicGenrePreference}}}
-  {{#if eventTimeframe}}
-  Desired Event Timeframe: {{{eventTimeframe}}}
+  {{#if specificEventDate}}
+  Desired Event Date: {{{specificEventDate}}}
   {{/if}}
   {{#if eventTimeOfDay}}
   Desired Time of Day: {{{eventTimeOfDay}}}
@@ -80,3 +80,4 @@ const suggestArtistsFlow = ai.defineFlow(
     return output!;
   }
 );
+
