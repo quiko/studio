@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -12,12 +13,14 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SuggestArtistsInputSchema = z.object({
-  eventDetails: z
-    .string()
-    .describe('Details about the event, including type, date, location, and budget.'),
+  eventType: z.string().describe('The type of event (e.g., Corporate Event, Wedding, Festival).'),
+  budgetRange: z.string().describe('The estimated budget range for the artist (e.g., $500-$1000, Negotiable).'),
   musicGenrePreference: z
     .string()
     .describe('The preferred music genre for the event.'),
+  additionalDetails: z
+    .string()
+    .describe('Any other relevant details about the event, such as date, specific location, desired atmosphere, or number of guests.').optional(),
 });
 export type SuggestArtistsInput = z.infer<typeof SuggestArtistsInputSchema>;
 
@@ -39,14 +42,18 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestArtistsOutputSchema},
   prompt: `You are an AI assistant helping event organizers find suitable artists for their events.
 
-  Based on the event details and music genre preference provided, suggest a list of artists that would be a good fit for the event.
+  Based on the event details provided, suggest a list of artists that would be a good fit.
   Also, provide a brief reasoning for each suggestion.
 
-  Event Details: {{{eventDetails}}}
+  Event Type: {{{eventType}}}
+  Budget Range: {{{budgetRange}}}
   Music Genre Preference: {{{musicGenrePreference}}}
+  {{#if additionalDetails}}
+  Additional Event Details: {{{additionalDetails}}}
+  {{/if}}
 
-  Ensure the output is a JSON object conforming to the SuggestArtistsOutputSchema.  The artistSuggestions field should be an array of strings.
-  The reasoning field should clearly explain why each artist was suggested, based on the event details and genre preference.
+  Ensure the output is a JSON object conforming to the SuggestArtistsOutputSchema. The artistSuggestions field should be an array of strings.
+  The reasoning field should clearly explain why each artist was suggested, based on all provided event details.
 `,
 });
 
@@ -61,3 +68,4 @@ const suggestArtistsFlow = ai.defineFlow(
     return output!;
   }
 );
+
