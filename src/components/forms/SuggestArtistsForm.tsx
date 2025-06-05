@@ -41,10 +41,25 @@ const musicGenres = [
   "Synthwave", "Orchestral", "World", "Indie", "Acoustic", "Latin"
 ].sort();
 
+const eventTimeframeOptions = [
+  "Flexible / Any", "This Week", "Next 2 Weeks", "Next Month", "Within 2 Months", "Within 3 Months", "Specific Date (provide in details)"
+];
+
+const eventTimeOfDayOptions = [
+  "Any Time", "Morning (9 AM - 12 PM)", "Afternoon (12 PM - 5 PM)", "Evening (5 PM - 9 PM)", "Late Night (9 PM onwards)"
+];
+
+const numberOfGuestsOptions = [
+  "Under 25", "25 - 50", "51 - 100", "101 - 250", "251 - 500", "500+"
+];
+
 const formSchema = z.object({
   eventType: z.string().min(1, { message: "Please select an event type." }),
   budgetRange: z.string().min(1, { message: "Please select a budget range." }),
   musicGenrePreference: z.string().min(1, { message: "Please select a music genre." }),
+  eventTimeframe: z.string().optional(),
+  eventTimeOfDay: z.string().optional(),
+  numberOfGuests: z.string().optional(),
   additionalDetails: z.string().optional(),
 });
 
@@ -59,6 +74,9 @@ export default function SuggestArtistsForm() {
       eventType: "",
       budgetRange: "",
       musicGenrePreference: "",
+      eventTimeframe: "",
+      eventTimeOfDay: "",
+      numberOfGuests: "",
       additionalDetails: "",
     },
   });
@@ -67,9 +85,11 @@ export default function SuggestArtistsForm() {
     setIsLoading(true);
     setSuggestions(null);
     try {
-      // Ensure that optional fields are passed as undefined if empty, as per Zod optional behavior
       const submissionValues: SuggestArtistsInput = {
         ...values,
+        eventTimeframe: values.eventTimeframe === "" ? undefined : values.eventTimeframe,
+        eventTimeOfDay: values.eventTimeOfDay === "" ? undefined : values.eventTimeOfDay,
+        numberOfGuests: values.numberOfGuests === "" ? undefined : values.numberOfGuests,
         additionalDetails: values.additionalDetails || undefined,
       };
       const result = await suggestArtists(submissionValues);
@@ -170,6 +190,75 @@ export default function SuggestArtistsForm() {
                 )}
               />
             </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <FormField
+                control={form.control}
+                name="eventTimeframe"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Desired Event Timeframe</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select preferred timeframe" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {eventTimeframeOptions.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="eventTimeOfDay"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Desired Time of Day</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select time of day" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {eventTimeOfDayOptions.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="numberOfGuests"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estimated Number of Guests</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select guest count" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {numberOfGuestsOptions.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <FormField
               control={form.control}
@@ -179,7 +268,7 @@ export default function SuggestArtistsForm() {
                   <FormLabel>Additional Event Details (Optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., Event date and time, specific venue, desired atmosphere, number of guests, specific song requests..."
+                      placeholder="e.g., If 'Specific Date' chosen above, provide it here. Also specific venue, desired atmosphere, specific song requests..."
                       {...field}
                       rows={4}
                     />
