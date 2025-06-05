@@ -10,26 +10,9 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { GenerateLyricsInputSchema, GenerateLyricsInput, GenerateLyricsOutputSchema, GenerateLyricsOutput } from "@/ai/types";
 
-export const GenerateLyricsInputSchema = z.object({
-  genre: z.string().describe('The genre of the song for which lyrics are being generated (e.g., Pop, Rock, Hip Hop).'),
-  mood: z.string().describe('The mood or emotional tone of the lyrics (e.g., joyful, reflective, angsty).'),
-  theme: z.string().min(3, { message: "Theme must be at least 3 characters." }).describe('The central theme or topic of the lyrics (e.g., love, loss, adventure, social commentary).'),
-  assistanceType: z.enum(["complete_lyrics", "lyric_ideas", "frame_suggestions"]).describe("Type of assistance requested: 'complete_lyrics' for full lyrics, 'lyric_ideas' for concepts and lines, or 'frame_suggestions' for structural outlines."),
-  keywords: z.string().describe('Specific keywords or phrases to try and include in the lyrics.').optional(),
-  desiredStructure: z.string().describe('An optional description of the desired lyric structure (e.g., "Verse-Chorus-Verse-Chorus-Bridge-Chorus", "AABA").').optional(),
-});
-export type GenerateLyricsInput = z.infer<typeof GenerateLyricsInputSchema>;
-
-export const GenerateLyricsOutputSchema = z.object({
-  generatedContent: z.string().describe('The AI-generated lyric content. This could be complete lyrics, a list of ideas, or structural frame suggestions based on the input assistance type.'),
-  contentType: z.string().describe('Describes the type of content generated (e.g., "Complete Lyrics", "Lyric Ideas", "Verse Frame Suggestions").'),
-  explanation: z.string().describe('An explanation of the generated content, including creative choices made or suggestions for how to use the content.').optional(),
-});
-export type GenerateLyricsOutput = z.infer<typeof GenerateLyricsOutputSchema>;
-
-export async function generateLyrics(input: GenerateLyricsInput): Promise<GenerateLyricsOutput> {
+export async function generateLyrics(input: GenerateLyricsInput): Promise<GenerateLyricsOutput> { // Keep export for server action
   return generateLyricsFlow(input);
 }
 
@@ -64,7 +47,7 @@ Format the output as a JSON object conforming to the GenerateLyricsOutputSchema.
 `,
 });
 
-const generateLyricsFlow = ai.defineFlow(
+export const generateLyricsFlow = ai.defineFlow(
   {
     name: 'generateLyricsFlow',
     inputSchema: GenerateLyricsInputSchema,

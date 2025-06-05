@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { createMusic, type CreateMusicOutput, type CreateMusicInput } from "@/ai/flows/create-music";
+import { createMusic } from "@/ai/flows/create-music";
 import { useState } from "react";
 import { Loader2, Music2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +61,7 @@ const styleVariationList = [
   "Unplugged", "Experimental"
 ].sort();
 
+import { type CreateMusicOutput, type CreateMusicInput } from "@/ai/types";
 
 const formSchema = z.object({
   genre: z.string().min(1, { message: "Please select a genre." }),
