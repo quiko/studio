@@ -1,4 +1,3 @@
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { APP_NAME } from '@/lib/constants';
@@ -9,32 +8,10 @@ import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo'
 export default function LandingPage() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden p-4 md:p-8 grid-background">
-      
+
       <Link href="/signup" className="absolute top-6 right-6 md:top-8 md:right-8 text-sm text-primary hover:underline z-20 flex items-center group">
         Sign Up <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
       </Link>
-
-      {/* Decorative Images */}
-      <div className="absolute top-10 left-10 md:top-16 md:left-16 w-28 h-44 md:w-32 md:h-48 z-0 opacity-30 transform -rotate-6">
-        <Image 
-          src="https://images.unsplash.com/photo-1560800452-f2d475982b96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8YXJ0aXN0JTIwbXVzaWN8ZW58MHx8fHwxNzQ5MTEzMjAzfDA&ixlib=rb-4.1.0&q=80&w=1080" 
-          alt="Artist in front of neon lights" 
-          layout="fill" 
-          objectFit="cover" 
-          className="rounded-lg shadow-xl"
-          data-ai-hint="artist neon" 
-        />
-      </div>
-      <div className="absolute top-16 right-10 md:top-24 md:right-20 w-36 h-28 md:w-40 md:h-32 z-0 opacity-30 transform rotate-4">
-        <Image 
-          src="https://placehold.co/300x200.png" 
-          alt="Singer with microphone" 
-          layout="fill" 
-          objectFit="cover" 
-          className="rounded-lg shadow-xl"
-          data-ai-hint="singer microphone dark"
-        />
-      </div>
 
       <header className="relative z-10 flex flex-col items-center text-center my-auto">
         <ObsessionFullTextLogo className="text-foreground w-auto h-20 sm:h-24 md:h-32 lg:h-40 select-none" />
@@ -42,17 +19,7 @@ export default function LandingPage() {
           (Body Text) Discover, create, and connect. The future of music curation.
         </p>
       </header>
-      
-      <div className="absolute bottom-[28%] md:bottom-1/4 left-1/2 transform -translate-x-1/2 w-4/5 sm:w-3/5 md:w-2/5 aspect-[16/9] z-0 opacity-50 shadow-2xl rounded-lg overflow-hidden">
-        <Image 
-          src="https://placehold.co/800x450.png" 
-          alt="Music concert" 
-          layout="fill" 
-          objectFit="cover"
-          data-ai-hint="music concert crowd"
-        />
-      </div>
-      
+
       <Link href="#" className="absolute bottom-6 right-6 md:bottom-8 md:right-8 text-sm text-muted-foreground hover:text-primary z-20 flex items-center group">
         <BookOpen className="mr-1.5 h-4 w-4" /> Wiki
       </Link>
