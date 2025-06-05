@@ -3,7 +3,7 @@
 
 import CreateMusicForm from "@/components/forms/CreateMusicForm";
 import GenerateLyricsForm from "@/components/forms/GenerateLyricsForm";
-import SynthesizeVocalsForm from "@/components/forms/SynthesizeVocalsForm";
+import { SynthesizeVocalsForm } from "@/components/forms/SynthesizeVocalsForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Music2, Edit, Voicemail } from "lucide-react"; // Voicemail can represent synthesized voice

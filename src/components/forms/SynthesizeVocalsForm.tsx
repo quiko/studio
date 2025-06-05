@@ -40,7 +40,7 @@ const emotionalTonesList = [
 
 type SynthesizeVocalsFormValues = z.infer<typeof SynthesizeVocalsInputSchema>;
 
-export default function SynthesizeVocalsForm() {
+export function SynthesizeVocalsForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [synthesisOutput, setSynthesisOutput] = useState<SynthesizeVocalsOutput | null>(null);
   const { toast } = useToast();
@@ -152,7 +152,7 @@ export default function SynthesizeVocalsForm() {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select an emotional tone" />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {emotionalTonesList.map((tone) => (
