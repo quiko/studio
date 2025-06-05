@@ -37,7 +37,8 @@ export const SynthesizeVocalsInputSchema = z.object({
   lyrics: z.string().min(10, { message: "Lyrics must be at least 10 characters." }).describe("The lyrics to be 'sung' by the AI."),
   vocalStyle: z.string().min(1, { message: "Please select a vocal style." }).describe("The desired vocal style (e.g., Male Tenor, Female Alto, Robotic, Ethereal Whisper)."),
   emotionalTone: z.string().min(1, { message: "Please select an emotional tone." }).describe("The emotional tone of the vocal performance (e.g., Joyful, Melancholic, Powerful, Gentle)."),
-  voiceCloningReference: z.string().describe("Conceptual reference for voice cloning (e.g., 'like a 70s rock singer', 'similar to a contemporary female pop artist'). This is for descriptive purposes only.").optional(),
+  referenceAudioUrl: z.string().url().describe("URL of the uploaded reference audio file in Firebase Storage.").optional(),
+  referenceAudioFileName: z.string().describe("Name of the uploaded reference audio file.").optional(),
 });
 export type SynthesizeVocalsInput = z.infer<typeof SynthesizeVocalsInputSchema>;
 

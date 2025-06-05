@@ -14,16 +14,21 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input as ShadcnInput } from "@/components/ui/input"; // Renamed to avoid conflict
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { synthesizeVocals } from "@/ai/flows/synthesize-vocals";
 import { type SynthesizeVocalsOutput, SynthesizeVocalsInputSchema, type SynthesizeVocalsInput } from "@/ai/types";
-import { useState } from "react";
-import { Loader2, Wand2, Voicemail, Info } from "lucide-react";
+import { useState, type ChangeEvent } from "react";
+import { Loader2, Wand2, Voicemail, Info, UploadCloud, FileAudio, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { storage } from "@/lib/firebase"; // Import storage
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"; // Import Firebase storage functions
+import { useUser } from "@/contexts/UserContext";
+
 
 const vocalStylesList = [
   "Male Tenor (Clear)", "Male Baritone (Warm)", "Male Bass (Deep)",
@@ -41,7 +46,11 @@ const emotionalTonesList = [
 type SynthesizeVocalsFormValues = z.infer<typeof SynthesizeVocalsInputSchema>;
 
 export function SynthesizeVocalsForm() {
+  const { firebaseUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [synthesisOutput, setSynthesisOutput] = useState<SynthesizeVocalsOutput | null>(null);
   const { toast } = useToast();
 
@@ -51,15 +60,100 @@ export function SynthesizeVocalsForm() {
       lyrics: "",
       vocalStyle: "",
       emotionalTone: "",
-      voiceCloningReference: "",
+      referenceAudioUrl: undefined,
+      referenceAudioFileName: undefined,
     },
   });
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (form.getValues("referenceAudioUrl")) { // If a file was previously uploaded and its URL is stored
+      const previousFileUrl = form.getValues("referenceAudioUrl");
+      if (previousFileUrl) {
+        const fileRef = storageRef(storage, previousFileUrl);
+        deleteObject(fileRef).catch(error => console.warn("Could not delete previous file from storage:", error));
+      }
+      form.setValue("referenceAudioUrl", undefined);
+      form.setValue("referenceAudioFileName", undefined);
+    }
+    setSelectedFile(event.target.files ? event.target.files[0] : null);
+    setSynthesisOutput(null); // Clear previous synthesis if new file is chosen
+  };
+
+  const removeSelectedFile = () => {
+    if (form.getValues("referenceAudioUrl")) {
+      const fileUrlToDelete = form.getValues("referenceAudioUrl");
+      if(fileUrlToDelete){
+        const fileRef = storageRef(storage, fileUrlToDelete);
+        deleteObject(fileRef).then(() => {
+          toast({ title: "Reference audio removed from storage."});
+        }).catch(error => {
+          console.warn("Could not delete file from storage during removal:", error);
+          toast({ title: "Could not remove file from storage", description: "Please try again.", variant: "destructive"});
+        });
+      }
+    }
+    setSelectedFile(null);
+    form.setValue("referenceAudioUrl", undefined);
+    form.setValue("referenceAudioFileName", undefined);
+    const fileInput = document.getElementById('referenceAudioFile') as HTMLInputElement;
+    if (fileInput) fileInput.value = ""; // Reset file input
+  }
 
   async function onSubmit(values: SynthesizeVocalsFormValues) {
     setIsLoading(true);
     setSynthesisOutput(null);
+    let currentValues = { ...values };
+
+    if (selectedFile && !currentValues.referenceAudioUrl) { // File selected but not yet uploaded
+      setIsUploading(true);
+      setUploadProgress(0);
+      const uniqueFileName = `referenceAudio/${firebaseUser?.uid || 'unknown_user'}/${Date.now()}_${selectedFile.name}`;
+      const fileRef = storageRef(storage, uniqueFileName);
+
+      try {
+        const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(progress);
+            },
+            (error) => {
+              console.error("Upload failed:", error);
+              toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+              setIsUploading(false);
+              setIsLoading(false);
+              reject(error);
+            },
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              form.setValue("referenceAudioUrl", downloadURL);
+              form.setValue("referenceAudioFileName", selectedFile.name);
+              currentValues.referenceAudioUrl = downloadURL;
+              currentValues.referenceAudioFileName = selectedFile.name;
+              toast({ title: "File Uploaded", description: `${selectedFile.name} uploaded successfully.` });
+              setIsUploading(false);
+              setUploadProgress(100);
+              resolve();
+            }
+          );
+        });
+      } catch (uploadError) {
+        // Error already handled by toast in uploadTask's error callback
+        setIsLoading(false);
+        return; // Stop submission if upload failed
+      }
+    } else if (!selectedFile) { // No file selected, ensure URL fields are undefined
+        currentValues.referenceAudioUrl = undefined;
+        currentValues.referenceAudioFileName = undefined;
+        form.setValue("referenceAudioUrl", undefined);
+        form.setValue("referenceAudioFileName", undefined);
+    }
+
+
     try {
-      const result = await synthesizeVocals(values);
+      const result = await synthesizeVocals(currentValues);
       setSynthesisOutput(result);
       toast({
         title: "Vocal Synthesis Described!",
@@ -74,6 +168,7 @@ export function SynthesizeVocalsForm() {
       });
     } finally {
       setIsLoading(false);
+      setIsUploading(false);
     }
   }
 
@@ -93,7 +188,7 @@ export function SynthesizeVocalsForm() {
           <Info className="h-5 w-5 text-accent" />
           <AlertTitle className="font-semibold text-accent">Conceptual Tool Only</AlertTitle>
           <AlertDescription className="text-accent/80">
-            This tool does not generate audible vocal tracks. It provides a detailed textual description to help you conceptualize and articulate your desired vocal sound and performance.
+            This tool does not generate audible vocal tracks. It provides a detailed textual description to help you conceptualize and articulate your desired vocal sound and performance. Uploaded audio is for conceptual reference by the AI.
           </AlertDescription>
         </Alert>
         <Form {...form}>
@@ -166,26 +261,57 @@ export function SynthesizeVocalsForm() {
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="voiceCloningReference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Conceptual Voice Cloning Reference (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 'A young female pop singer like Olivia Rodrigo', 'A classic 70s rock tenor'" {...field} />
-                  </FormControl>
-                   <FormDescription>
-                    Describe a voice you'd like the AI to conceptually emulate. This is for descriptive inspiration only.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+            <FormItem>
+              <FormLabel htmlFor="referenceAudioFile">Conceptual Voice Reference Audio (Optional)</FormLabel>
+              <FormControl>
+                <ShadcnInput 
+                  id="referenceAudioFile"
+                  type="file" 
+                  accept="audio/wav, audio/mpeg, audio/mp3" // Common audio types
+                  onChange={handleFileChange}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  disabled={isUploading}
+                />
+              </FormControl>
+              <FormDescription>
+                Upload a short audio file (WAV, MP3) as a conceptual reference. The AI will describe how it might be inspired by it. Max 5MB.
+              </FormDescription>
+              {selectedFile && (
+                <div className="mt-2 p-3 border rounded-md bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileAudio className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium">{selectedFile.name}</span>
+                      <span className="text-xs text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" onClick={removeSelectedFile} disabled={isUploading}>
+                      <XCircle className="h-4 w-4 mr-1" /> Remove
+                    </Button>
+                  </div>
+                  {isUploading && uploadProgress !== null && (
+                    <Progress value={uploadProgress} className="w-full h-2 mt-2" />
+                  )}
+                  {form.getValues("referenceAudioUrl") && !isUploading && uploadProgress === 100 && (
+                     <p className="text-xs text-green-600 mt-1">File uploaded and linked.</p>
+                  )}
+                </div>
               )}
-            />
+              <FormMessage />
+            </FormItem>
+            
+            {/* Hidden fields for RHF to track URL and FileName, populated by upload logic */}
+            <FormField control={form.control} name="referenceAudioUrl" render={({ field }) => <ShadcnInput type="hidden" {...field} />} />
+            <FormField control={form.control} name="referenceAudioFileName" render={({ field }) => <ShadcnInput type="hidden" {...field} />} />
 
-            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-              {isLoading ? (
+
+            <Button type="submit" disabled={isLoading || isUploading} className="w-full sm:w-auto">
+              {isUploading ? (
                 <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : isLoading ? (
+                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Describing Vocals...
                 </>
