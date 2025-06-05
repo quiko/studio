@@ -28,9 +28,8 @@ if (getApps().length === 0) {
 // Initialize App Check on the client side
 if (typeof window !== 'undefined') {
   try {
-    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    const debugTokenFromEnv = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
-
+    const recaptchaSiteKey = "6LcMZFMrAAAAAPch6lMWFxSvQgjzp_50PsEUXxJA";
+    const debugTokenFromEnv = "BC875472-F16B-4071-AFE1-66676AC98D79"
     if (process.env.NODE_ENV !== 'production') {
       if (debugTokenFromEnv) {
         console.log("Firebase App Check (Dev): Found NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN. Assigning to window.FIREBASE_APPCHECK_DEBUG_TOKEN. Ensure this token is registered in your Firebase project's App Check settings for the web app:", debugTokenFromEnv);
