@@ -6,13 +6,12 @@ import { initializeAppCheck, ReCaptchaV3Provider, type AppCheck } from "firebase
 
 // This configuration MUST match the one from your Firebase project settings.
 const firebaseConfig = {
-  apiKey: "AIzaSyDxHFkFJGH_igiXW_0RM7S8Na1jt7wyvFg",
-  authDomain: "obsession-music-ai-2a20f.firebaseapp.com",
-  projectId: "obsession-music-ai-2a20f",
-  storageBucket: "obsession-music-ai-2a20f.appspot.com", // Ensure this is .appspot.com
-  messagingSenderId: "989087866304",
-  appId: "1:989087866304:web:3d3138d219d0428947bc25",
-  measurementId: "G-N11JX6GGDV"
+  apiKey: "AIzaSyBExL4Z4DG4kROgtnoeRV3ACgWGpxMxzA0",
+  authDomain: "maestroai-byliq.firebaseapp.com",
+  projectId: "maestroai-byliq",
+  storageBucket: "maestroai-byliq.firebasestorage.app",
+  messagingSenderId: "116231535273",
+  appId: "1:116231535273:web:b1d80afe2fecabf14087b8",
 };
 
 let app: FirebaseApp;

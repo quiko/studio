@@ -17,7 +17,7 @@ export default function LandingPage() {
       {/* Decorative Images */}
       <div className="absolute top-10 left-10 md:top-16 md:left-16 w-28 h-44 md:w-32 md:h-48 z-0 opacity-30 transform -rotate-6">
         <Image 
-          src="https://images.unsplash.com/photo-1587522608003-be063e0689a9?q=80&w=200&h=300&fit=crop" 
+          src="https://images.unsplash.com/photo-1560800452-f2d475982b96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8YXJ0aXN0JTIwbXVzaWN8ZW58MHx8fHwxNzQ5MTEzMjAzfDA&ixlib=rb-4.1.0&q=80&w=1080" 
           alt="Artist in front of neon lights" 
           layout="fill" 
           objectFit="cover" 
