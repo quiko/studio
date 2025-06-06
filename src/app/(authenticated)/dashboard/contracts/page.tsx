@@ -3,7 +3,7 @@
 
 import CreateContractForm from "@/components/forms/CreateContractForm"; 
 import { PageHeader } from "@/components/ui/PageHeader";
-import { UserType, MOCK_ARTIST_CONTRACTS, type GeneratedContractData, type GeneratedContractStatus } from "@/lib/constants";
+import { UserType, MOCK_ARTIST_CONTRACTS, type GeneratedContractData, type GeneratedContractStatus, type ArtistContractItem } from "@/lib/constants"; // Added ArtistContractItem
 import { useUser } from "@/contexts/UserContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { FileWarning, Info, FileText, ListChecks, Edit3, Send, Trash2, AlertCircle, CheckCircle2, Clock } from "lucide-react";
@@ -34,7 +34,7 @@ function OrganizerContractItemCard({ contract }: { contract: GeneratedContractDa
       case "draft":
         return "outline";
       case "pending_artist_signature":
-        return "secondary"; // Using secondary for pending states
+        return "secondary"; 
       case "signed":
         return "default";
       case "cancelled":
@@ -99,7 +99,43 @@ function OrganizerContractItemCard({ contract }: { contract: GeneratedContractDa
 
 
 export default function ContractsPage() {
-  const { userRole, organizerContracts } = useUser(); 
+  const { userRole, organizerContracts, firebaseUser: currentUser } = useUser(); 
+
+  const transformGeneratedToArtistContractItem = (gc: GeneratedContractData): ArtistContractItem => {
+    let artistFacingStatus: ArtistContractItem['status'];
+    switch (gc.status) {
+      case 'pending_artist_signature':
+        artistFacingStatus = 'Pending Review';
+        break;
+      case 'signed':
+        artistFacingStatus = 'Accepted';
+        break;
+      case 'completed': // Assuming 'completed' in GeneratedContractData means 'Fulfilled' for artist
+        artistFacingStatus = 'Fulfilled';
+        break;
+      case 'cancelled':
+        artistFacingStatus = 'Cancelled';
+        break;
+      default:
+        // For other statuses like 'draft', 'pending_organizer_signature', etc.,
+        // which might not be directly shown to the artist with these specific labels or actions in ArtistContractCard.
+        // Defaulting to 'Pending Review' or a more generic status if appropriate.
+        // Or filter them out before mapping if ArtistContractCard cannot represent them.
+        artistFacingStatus = 'Pending Review'; // Or some other sensible default for display
+    }
+
+    return {
+      id: gc.id,
+      eventName: gc.eventName,
+      organizerName: gc.organizerName,
+      dateProposed: format(new Date(gc.createdAt), "PPP"), // Using createdAt as dateProposed
+      scopeOfWork: gc.clauses, // Assuming clauses contain the scope
+      paymentAmount: gc.fee,
+      paymentTerms: "Refer to contract clauses for payment terms.", // Placeholder, or could be extracted
+      contractTerms: gc.clauses,
+      status: artistFacingStatus,
+    };
+  };
 
   return (
     <div>
@@ -153,22 +189,33 @@ export default function ContractsPage() {
       )}
 
       {userRole === UserType.ARTIST && (
-        <div>
-          {MOCK_ARTIST_CONTRACTS.length === 0 ? (
-            <Alert>
-              <FileText className="h-4 w-4" />
-              <AlertTitle className="font-headline">No Contracts Yet</AlertTitle>
-              <AlertDescription>
-                You currently don't have any contracts. Contracts shared by organizers will appear here.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MOCK_ARTIST_CONTRACTS.map((contract) => (
-                <ArtistContractCard key={contract.id} contract={contract} />
-              ))}
-            </div>
-          )}
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+                <CardTitle className="font-headline flex items-center"><FileText className="mr-2 h-6 w-6 text-primary"/>My Agreements</CardTitle>
+                <CardDescription>Contracts you are involved in as an artist. Review and sign pending agreements.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {organizerContracts.filter(c => c.artistId === currentUser?.uid && (c.status === 'pending_artist_signature' || c.status === 'signed' || c.status === 'completed' || c.status === 'cancelled')).length === 0 ? (
+                <Alert>
+                  <FileText className="h-4 w-4" />
+                  <AlertTitle className="font-headline">No Contracts Yet</AlertTitle>
+                  <AlertDescription>
+                    You currently don't have any contracts. Contracts shared by organizers will appear here.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-6">
+                  {organizerContracts
+                    .filter(c => c.artistId === currentUser?.uid && (c.status === 'pending_artist_signature' || c.status === 'signed' || c.status === 'completed' || c.status === 'cancelled'))
+                    .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((contract) => (
+                      <ArtistContractCard key={contract.id} contract={transformGeneratedToArtistContractItem(contract)} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

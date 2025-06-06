@@ -23,6 +23,7 @@ interface UserContextType {
   updateArtistProfile: (userId: string, profile: ArtistProfileData) => void;
   organizerContracts: GeneratedContractData[];
   addOrganizerContract: (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'>) => void;
+  artistSignsContract: (contractId: string) => void;
   organizerSignsContract: (contractId: string) => void;
 }
 
@@ -177,6 +178,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     persistOrganizerContracts(updatedContracts);
   };
 
+  const artistSignsContract = (contractId: string) => {
+    const updatedContracts = organizerContracts.map(c => {
+      if (c.id === contractId && c.status === 'pending_artist_signature') {
+        return {
+          ...c,
+          status: 'signed' as GeneratedContractStatus,
+          signedByArtist: true,
+        };
+      }
+      return c;
+    });
+    persistOrganizerContracts(updatedContracts);
+  };
+
 
   return (
     <UserContext.Provider value={{ 
@@ -187,7 +202,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       logout,
       events, addEvent, updateEvent, deleteEvent, 
       artistProfiles, getArtistProfile, updateArtistProfile,
-      organizerContracts, addOrganizerContract, organizerSignsContract
+      organizerContracts, addOrganizerContract, organizerSignsContract, artistSignsContract
     }}>
       {children}
     </UserContext.Provider>
