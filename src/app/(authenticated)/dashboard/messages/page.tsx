@@ -10,10 +10,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, MessageCircle, Menu } from 'lucide-react';
 import { MOCK_CONVERSATIONS, CURRENT_USER_MOCK_ID, type Conversation, type Message as MessageType } from '@/lib/constants';
-import { useUser } from '@/contexts/UserContext';
 import { format, formatDistanceToNowStrict, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useUser } from '@/contexts/UserContext'; // Added useUser import
 
 interface ConversationListItemProps {
   conversation: Conversation;
@@ -101,14 +101,13 @@ function MessageBubble({ message, isOwnMessage, contactAvatar, contactName }: Me
 
 
 export default function MessagesPage() {
-  const { firebaseUser } = useUser(); // For identifying user's own messages
+  const { firebaseUser } = useUser(); // Get firebaseUser from context
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS); // Local state for messages
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+  const selectedConversation = MOCK_CONVERSATIONS.find(c => c.id === selectedConversationId);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -116,19 +115,17 @@ export default function MessagesPage() {
 
   useEffect(scrollToBottom, [selectedConversation?.messages]);
 
-
   const handleSelectConversation = (conversationId: string) => {
     setSelectedConversationId(conversationId);
-    // Mark messages as read (mock)
-    setConversations(prevConvos => 
-      prevConvos.map(convo => 
-        convo.id === conversationId ? { ...convo, unreadCount: 0 } : convo
-      )
-    );
+    // Mark conversation as read (simplified for now)
+    const conversation = MOCK_CONVERSATIONS.find(c => c.id === conversationId);
+    if (conversation) {
+      conversation.unreadCount = 0; 
+    }
   };
-  
+
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversationId) return;
+    if (!newMessage.trim() || !selectedConversation) return;
 
     const message: MessageType = {
       id: `msg-${Date.now()}`,
@@ -137,21 +134,15 @@ export default function MessagesPage() {
       timestamp: new Date().toISOString(),
     };
 
-    setConversations(prevConvos =>
-      prevConvos.map(convo =>
-        convo.id === selectedConversationId
-          ? {
-              ...convo,
-              messages: [...convo.messages, message],
-              lastMessagePreview: message.text,
-              lastMessageTimestamp: message.timestamp,
-            }
-          : convo
-      ).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()) // Re-sort by new last message
-    );
+    // Add message to the selected conversation (mock in-memory update)
+    selectedConversation.messages.push(message);
+    selectedConversation.lastMessagePreview = message.text;
+    selectedConversation.lastMessageTimestamp = message.timestamp;
+    
     setNewMessage('');
-    setTimeout(scrollToBottom, 0); // Ensure scroll after state update
+    scrollToBottom(); 
   };
+
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height,100px))]">
@@ -168,7 +159,7 @@ export default function MessagesPage() {
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {conversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map((convo) => (
+              {MOCK_CONVERSATIONS.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map((convo) => (
                 <ConversationListItem
                   key={convo.id}
                   conversation={convo}
@@ -199,7 +190,7 @@ export default function MessagesPage() {
                   <MessageBubble
                     key={msg.id}
                     message={msg}
-                    isOwnMessage={msg.senderId === (firebaseUser?.uid || CURRENT_USER_MOCK_ID)}
+                    isOwnMessage={msg.senderId === (firebaseUser?.uid || CURRENT_USER_MOCK_ID)} // Compare with real UID
                     contactAvatar={selectedConversation.contactAvatar}
                     contactName={selectedConversation.contactName}
                   />
@@ -240,5 +231,3 @@ export default function MessagesPage() {
     </div>
   );
 }
-
-    
