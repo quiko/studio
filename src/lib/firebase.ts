@@ -9,6 +9,7 @@ import { initializeAppCheck, ReCaptchaV3Provider, type AppCheck } from "firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBExL4Z4DG4kROgtnoeRV3ACgWGpxMxzA0",
   authDomain: "maestroai-byliq.firebaseapp.com",
+  databaseURL: "https://maestroai-byliq-default-rtdb.firebaseio.com",
   projectId: "maestroai-byliq",
   storageBucket: "maestroai-byliq.appspot.com", // Corrected to .appspot.com for storage
   messagingSenderId: "116231535273",

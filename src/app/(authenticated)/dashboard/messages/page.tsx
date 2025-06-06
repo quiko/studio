@@ -1,19 +1,223 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MessageCircle, Menu } from 'lucide-react';
-import { MOCK_CONVERSATIONS, CURRENT_USER_MOCK_ID, type Conversation, type Message as MessageType } from '@/lib/constants';
-import { format, formatDistanceToNowStrict, isToday, isYesterday } from 'date-fns';
+import { Send, MessageCircle, Loader2 } from 'lucide-react';
+import { CURRENT_USER_MOCK_ID, type Conversation, type Message as MessageType } from '@/lib/constants';
+import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge'; // Removed capitalize import
 import { useUser } from '@/contexts/UserContext'; // Added useUser import
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, addDoc, serverTimestamp, updateDoc, getDocs } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { type UserProfile } from '@/types';
+
+interface ConversationListItemProps {
+  conversation: Conversation;
+  isOwnMessage: boolean;
+  contactAvatar: string;
+  contactName: string;
+}
+
+function MessageBubble({ message, isOwnMessage, contactAvatar, contactName }: MessageBubbleProps) {
+  const messageDate = new Date(message.timestamp);
+  const displayTime = format(messageDate, 'p');
+
+  return (
+    <div className={cn("flex items-end gap-2 mb-4", isOwnMessage ? "justify-end" : "justify-start")}>
+      {!isOwnMessage && (
+        <Avatar className="h-8 w-8 border self-start">
+          <AvatarImage src={contactAvatar} alt={contactName} data-ai-hint="person avatar small" />
+          <AvatarFallback>{contactName.substring(0,1)}</AvatarFallback>
+        </Avatar>
+      )}
+      <div
+        className={cn(
+          "max-w-[70%] p-3 rounded-xl shadow",
+          isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card text-card-foreground rounded-bl-none"
+        )}
+      >
+        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+        <p className={cn("text-xs mt-1", isOwnMessage ? "text-primary-foreground/70 text-right" : "text-muted-foreground/70 text-left")}>
+          {displayTime}
+        </p>
+      </div>
+      {isOwnMessage && (
+         <div className="h-8 w-8 flex-shrink-0"></div>
+      )}
+    </div>
+  );
+}
+
+
+
+export default function MessagesPage() {
+  const { firebaseUser } = useUser();
+  const [newMessage, setNewMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Firebase State and Effects
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<MessageType[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
+  const { toast } = useToast();
+
+   // Find the selected conversation from the fetched list
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+
+  // Function to scroll messages to the bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+
+  // Fetch Conversations for current user
+  useEffect(() => {
+    if (!firebaseUser?.uid) {
+        setLoadingConversations(false);
+        return;
+    }
+
+    setLoadingConversations(true);
+    const q = query(
+        collection(db, 'conversations'),
+        // We need a composite index on participants and lastMessageTimestamp
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const fetchedConversations: Conversation[] = [];
+        for (const docSnap of snapshot.docs) {
+            const data = docSnap.data();
+            // Basic filtering for now, optimize with query later
+                // For simplicity, assume 2 participants: current user and one other
+                const otherParticipantId = data.participants.find((id: string) => id !== firebaseUser.uid);
+                let contactName = 'Unknown User';
+                let contactAvatar = '';
+                let contactRole = ''; // Fetch role if needed
+
+                // Fetch the other participant's profile
+                if (otherParticipantId) {
+                    try {
+                        const userDoc = await getDocs(query(collection(db, 'users'), where('userId', '==', otherParticipantId)));
+                        if (!userDoc.empty) {
+                            const userData = userDoc.docs[0].data() as UserProfile; // Assuming UserProfile type
+                            contactName = userData.displayName || userData.email || 'Unknown User';
+                            contactAvatar = userData.photoURL || '';
+                            contactRole = userData.userType; // Assuming userType exists in UserProfile
+                        }
+                    } catch (error) {
+                        console.error("Error fetching participant profile:", error);
+                    }
+                }
+                fetchedConversations.push({
+                    id: docSnap.id,
+                    participants: data.participants,
+                    contactId: otherParticipantId, // Store the other participant's ID
+                    contactName: contactName,
+                    contactAvatar: contactAvatar,
+                    contactRole: contactRole,
+                    lastMessagePreview: data.lastMessagePreview || 'No messages yet',
+                    lastMessageTimestamp: data.lastMessageTimestamp?.toDate().toISOString() || new Date().toISOString(),
+                    unreadCount: data.unreadCount?.[firebaseUser.uid] || 0, // Assuming unread counts are stored per user ID
+                    messages: [], // Messages are fetched separately
+                });
+        }
+        setConversations(fetchedConversations);
+        setLoadingConversations(false);
+    }, (error) => {
+        console.error("Error fetching conversations:", error);
+        toast({
+            title: "Error",
+            description: "Failed to load conversations.",
+            variant: "destructive",
+        });
+        setLoadingConversations(false);
+    });
+
+    return () => unsubscribe();
+  }, [firebaseUser?.uid, toast]);
+
+
+  // Fetch Messages for the selected conversation
+  useEffect(() => {
+    if (!selectedConversationId) {
+        setMessages([]);
+        return;
+    }
+
+    setLoadingMessages(true);
+    const q = query(
+        collection(db, 'conversations', selectedConversationId, 'messages'),
+        orderBy('timestamp')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedMessages: MessageType[] = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data() as MessageType,
+            timestamp: (doc.data().timestamp?.toDate() || new Date()).toISOString(), // Ensure timestamp is a string
+        }));
+        setMessages(fetchedMessages);
+        setLoadingMessages(false);
+    }, (error) => {
+        console.error("Error fetching messages:", error);
+        toast({
+            title: "Error",
+            description: "Failed to load messages.",
+            variant: "destructive",
+        });
+        setLoadingMessages(false);
+    });
+
+    return () => unsubscribe(); // Cleanup the listener
+  }, [selectedConversationId, toast]); // Re-run when selectedConversation changes
+
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    // Add a small delay to ensure DOM updates
+    const timer = setTimeout(() => {
+        scrollToBottom();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages]);
+
+
+  const handleSelectConversation = useCallback(async (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    // Mark conversation as read
+    if (firebaseUser?.uid) {
+        try {
+            const convoRef = doc(db, 'conversations', conversationId);
+            await updateDoc(convoRef, {
+                [`unreadCount.${firebaseUser.uid}`]: 0 // Reset unread count for current user
+            });
+        } catch (error) {
+            console.error("Error marking conversation as read:", error);
+            // Optionally show a toast
+        }
+    }
+  }, [firebaseUser?.uid]);
+  useEffect(() => {
+    if (selectedConversationId) {
+        setConversations(prevConversations =>
+            prevConversations.map(convo =>
+                convo.id === selectedConversationId ? { ...convo, unreadCount: 0 } : convo
+            )
+        );
+    }
+  }, [selectedConversationId]);
+
 
 interface ConversationListItemProps {
   conversation: Conversation;
@@ -62,85 +266,46 @@ function ConversationListItem({ conversation, isSelected, onSelect }: Conversati
   );
 }
 
-interface MessageBubbleProps {
-  message: MessageType;
-  isOwnMessage: boolean;
-  contactAvatar: string;
-  contactName: string;
-}
-
-function MessageBubble({ message, isOwnMessage, contactAvatar, contactName }: MessageBubbleProps) {
-  const messageDate = new Date(message.timestamp);
-  const displayTime = format(messageDate, 'p');
-
-  return (
-    <div className={cn("flex items-end gap-2 mb-4", isOwnMessage ? "justify-end" : "justify-start")}>
-      {!isOwnMessage && (
-        <Avatar className="h-8 w-8 border self-start">
-          <AvatarImage src={contactAvatar} alt={contactName} data-ai-hint="person avatar small" />
-          <AvatarFallback>{contactName.substring(0,1)}</AvatarFallback>
-        </Avatar>
-      )}
-      <div
-        className={cn(
-          "max-w-[70%] p-3 rounded-xl shadow",
-          isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card text-card-foreground rounded-bl-none"
-        )}
-      >
-        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-        <p className={cn("text-xs mt-1", isOwnMessage ? "text-primary-foreground/70 text-right" : "text-muted-foreground/70 text-left")}>
-          {displayTime}
-        </p>
-      </div>
-      {isOwnMessage && (
-         <div className="h-8 w-8 flex-shrink-0"></div>
-      )}
-    </div>
-  );
-}
-
-
-export default function MessagesPage() {
-  const { firebaseUser } = useUser(); // Get firebaseUser from context
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [newMessage, setNewMessage] = useState('');
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const selectedConversation = MOCK_CONVERSATIONS.find(c => c.id === selectedConversationId);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(scrollToBottom, [selectedConversation?.messages]);
-
-  const handleSelectConversation = (conversationId: string) => {
-    setSelectedConversationId(conversationId);
-    // Mark conversation as read (simplified for now)
-    const conversation = MOCK_CONVERSATIONS.find(c => c.id === conversationId);
-    if (conversation) {
-      conversation.unreadCount = 0; 
-    }
-  };
-
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
-    const message: MessageType = {
-      id: `msg-${Date.now()}`,
-      senderId: firebaseUser?.uid || CURRENT_USER_MOCK_ID, // Use real UID if available
-      text: newMessage.trim(),
-      timestamp: new Date().toISOString(),
+    const messageData = {
+        senderId: firebaseUser?.uid || 'anonymous', // Use actual UID
+        text: newMessage.trim(),
+        timestamp: serverTimestamp(), // Use server timestamp
     };
 
-    // Add message to the selected conversation (mock in-memory update)
-    selectedConversation.messages.push(message);
-    selectedConversation.lastMessagePreview = message.text;
-    selectedConversation.lastMessageTimestamp = message.timestamp;
-    
-    setNewMessage('');
-    scrollToBottom(); 
+    const conversationRef = doc(db, 'conversations', selectedConversation.id);
+
+    // Add message to the subcollection
+    addDoc(collection(conversationRef, 'messages'), messageData)
+        .then(() => {
+            // Update last message preview and timestamp in the conversation document
+            return updateDoc(conversationRef, {
+                lastMessagePreview: messageData.text,
+                lastMessageTimestamp: messageData.timestamp,
+                // Increment unread count for the *other* participant(s)
+                // This requires knowing who the other participants are.
+                // For a 1:1 chat, find the ID that is not the current user's ID.
+                 ...selectedConversation.participants.reduce((acc, participantId) => {
+                    if (participantId !== firebaseUser?.uid) {
+                       acc[`unreadCount.${participantId}`] = (selectedConversation.unreadCount?.[participantId] || 0) + 1;
+                    }
+                    return acc;
+                 }, {} as any),
+            });
+        })
+        .then(() => {
+            setNewMessage('');
+        })
+        .catch((error) => {
+            console.error("Error sending message:", error);
+            toast({
+                title: "Error",
+                description: "Failed to send message.",
+                variant: "destructive",
+            });
+        });
   };
 
 
@@ -156,15 +321,21 @@ export default function MessagesPage() {
           <div className="p-4 border-b border-border">
             <h2 className="text-lg font-semibold font-headline">Chats</h2>
             {/* Search/Filter can be added here later */}
+              {loadingConversations && (
+                  <div className="flex justify-center items-center mt-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+              )}
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {MOCK_CONVERSATIONS.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map((convo) => (
+              {/* Using 'conversations' state from Firebase */}
+              {conversations.map((convo) => (
                 <ConversationListItem
                   key={convo.id}
                   conversation={convo}
                   isSelected={convo.id === selectedConversationId}
-                  onSelect={() => handleSelectConversation(convo.id)}
+                  onSelect={() => handleSelectConversation(convo.id)} // Use memoized handler
                 />
               ))}
             </div>
@@ -182,15 +353,21 @@ export default function MessagesPage() {
                 </Avatar>
                 <div>
                   <h3 className="font-semibold font-headline">{selectedConversation.contactName}</h3>
-                  <p className="text-xs text-muted-foreground capitalize">{selectedConversation.contactRole}</p>
+                  <p className="text-xs text-muted-foreground">{capitalize(selectedConversation.contactRole)}</p>
                 </div>
               </div>
               <ScrollArea className="flex-1 p-4 space-y-4">
-                {selectedConversation.messages.map((msg) => (
+                  {loadingMessages && (
+                      <div className="flex justify-center items-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                  )}
+                {/* Using 'messages' state from Firebase */}
+                {messages.map((msg) => (
                   <MessageBubble
                     key={msg.id}
                     message={msg}
-                    isOwnMessage={msg.senderId === (firebaseUser?.uid || CURRENT_USER_MOCK_ID)} // Compare with real UID
+                    isOwnMessage={msg.senderId === firebaseUser?.uid} // Compare with real UID
                     contactAvatar={selectedConversation.contactAvatar}
                     contactName={selectedConversation.contactName}
                   />

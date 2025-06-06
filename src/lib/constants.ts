@@ -74,12 +74,6 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const MOCK_ARTISTS = [
-  { id: '1', name: 'DJ Sparkle', genre: 'Electronic', rate: '$$$', portfolio: 'https://example.com/djsparkle', image: 'https://placehold.co/300x200.png', dataAiHint: 'dj music' },
-  { id: '2', name: 'The Rocking Stones', genre: 'Rock', rate: '$$$$', portfolio: 'https://example.com/rockingstones', image: 'https://placehold.co/300x200.png', dataAiHint: 'rock band' },
-  { id: '3', name: 'Smooth Jazz Trio', genre: 'Jazz', rate: '$$', portfolio: 'https://example.com/jazztrio', image: 'https://placehold.co/300x200.png', dataAiHint: 'jazz band' },
-];
-
 export type EventItem = {
   id: string;
   title: string;

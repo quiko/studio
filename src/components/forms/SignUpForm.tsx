@@ -24,7 +24,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -70,16 +70,15 @@ export default function SignUpForm() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const firebaseUser = userCredential.user;
+      const { user: firebaseUser } = userCredential;
 
       await setDoc(doc(db, "users", firebaseUser.uid), {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         fullName: values.fullName,
         role: values.userType,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(), // Use serverTimestamp for consistent server-side timestamp
       });
-      
       setUserRoleState(values.userType); 
 
       toast({
@@ -87,11 +86,10 @@ export default function SignUpForm() {
           description: `Welcome to ${APP_NAME}, ${values.fullName}! Redirecting to dashboard...`,
       });
       router.push('/dashboard');
-
     } catch (error: any) {
       console.error("Sign up error:", error);
       let errorMessage = "Failed to create account. Please try again.";
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.code === 'auth/email-already-in-use') { // Handle specific Firebase Auth errors
         errorMessage = "This email address is already in use.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "The password is too weak. It must be at least 6 characters.";
