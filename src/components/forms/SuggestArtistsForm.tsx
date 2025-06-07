@@ -26,6 +26,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 const eventTypes = [
   "Corporate Event", "Private Party", "Wedding", "Festival", "Concert", 
@@ -64,7 +65,7 @@ const numberOfGuestsOptions = [
 const formSchema = z.object({
   eventType: z.string().min(1, { message: "Please select an event type." }),
   budgetRange: z.string().min(1, { message: "Please select a budget range." }),
-  musicGenrePreference: z.string().min(1, { message: "Please select a music genre." }),
+  musicGenrePreference: z.array(z.string()).min(1, { message: "Please select at least one music genre." }),
   specificEventDate: z.date().optional(),
   eventTimeOfDay: z.string().optional(),
   numberOfGuests: z.string().optional(),
@@ -81,7 +82,7 @@ export default function SuggestArtistsForm() {
     defaultValues: {
       eventType: "",
       budgetRange: "",
-      musicGenrePreference: "",
+      musicGenrePreference: [],
       specificEventDate: undefined,
       eventTimeOfDay: "",
       numberOfGuests: "",
@@ -180,19 +181,17 @@ export default function SuggestArtistsForm() {
                 name="musicGenrePreference"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Music Genre Preference</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select music genre" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {musicGenres.map((genre) => (
-                          <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Music Genre Preference(s)</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={musicGenres.map(genre => ({ value: genre, label: genre }))}
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        placeholder="Select music genre(s)"
+                        variant="outline"
+                        animation={2}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

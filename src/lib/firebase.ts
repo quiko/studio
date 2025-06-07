@@ -11,7 +11,7 @@ const firebaseConfig = {
   authDomain: "maestroai-byliq.firebaseapp.com",
   databaseURL: "https://maestroai-byliq-default-rtdb.firebaseio.com",
   projectId: "maestroai-byliq",
-  storageBucket: "maestroai-byliq.appspot.com", // Corrected to .appspot.com for storage
+  storageBucket: "maestroai-byliq.firebasestorage.app",
   messagingSenderId: "116231535273",
   appId: "1:116231535273:web:b1d80afe2fecabf14087b8",
 };

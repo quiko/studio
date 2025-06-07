@@ -17,11 +17,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createMusic } from "@/ai/flows/create-music";
 import { useState } from "react";
 import { Loader2, Music2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { MultiSelect } from "@/components/ui/multi-select"; // Added MultiSelect import
+import { type CreateMusicOutput, type CreateMusicInput } from "@/ai/types";
 
 const instrumentsList = [
   { id: "piano", label: "Piano" },
@@ -61,10 +63,9 @@ const styleVariationList = [
   "Unplugged", "Experimental"
 ].sort();
 
-import { type CreateMusicOutput, type CreateMusicInput } from "@/ai/types";
 
 const formSchema = z.object({
-  genre: z.string().min(1, { message: "Please select a genre." }),
+  genre: z.array(z.string()).min(1, { message: "Please select at least one genre." }),
   mood: z.string().min(1, { message: "Please select a mood." }),
   instruments: z.array(z.string()).refine((value) => value.length > 0, {
     message: "Please select at least one instrument.",
@@ -78,14 +79,14 @@ export default function CreateMusicForm() {
   const [composition, setComposition] = useState<CreateMusicOutput | null>(null);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+ const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      genre: "",
+      genre: [], // Default to empty array for MultiSelect
       mood: "",
       instruments: [],
       length: "medium",
-      styleVariation: "", // Empty string will show placeholder by default
+      styleVariation: "", 
     },
   });
 
@@ -94,7 +95,7 @@ export default function CreateMusicForm() {
     setComposition(null);
     try {
       const submissionValues: CreateMusicInput = {
-        genre: values.genre,
+        genre: values.genre.join(', '), 
         mood: values.mood,
         instruments: values.instruments.join(', '),
         length: values.length,
@@ -121,11 +122,9 @@ export default function CreateMusicForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline flex items-center">
-          <Music2 className="mr-2 h-6 w-6 text-primary" />
-          AI Music Studio
+        <CardTitle className="font-headline text-2xl font-bold">
+          Create Music
         </CardTitle>
-        <CardDescription>Describe your desired music, and let our AI compose it for you.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -134,24 +133,30 @@ export default function CreateMusicForm() {
               <FormField
                 control={form.control}
                 name="genre"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Genre</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                render={({ field }) => {
+                  const normalizedValue = Array.isArray(field.value)
+                    ? field.value
+                    : field.value === '' || field.value === null || field.value === undefined
+                      ? []
+                      : [String(field.value)];
+                  return (
+                    <FormItem>
+                      <FormLabel>Genres</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a music genre" />
-                        </SelectTrigger>
+                        <MultiSelect
+                          options={genreList.map(genre => ({ value: genre, label: genre }))}
+                          placeholder="Select genres"
+                          {...field}
+                          value={normalizedValue}
+                          onChange={(selectedValues: string[]) => {
+                            field.onChange(selectedValues);
+                          }}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {genreList.map((genre) => (
-                          <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
@@ -159,15 +164,15 @@ export default function CreateMusicForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mood</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a mood" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {moodList.map((mood) => (
-                          <SelectItem key={mood} value={mood}>{mood}</SelectItem>
+                        {moodList.map((moodItem) => (
+                          <SelectItem key={moodItem} value={moodItem}>{moodItem}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -204,10 +209,11 @@ export default function CreateMusicForm() {
                                 <Checkbox
                                   checked={field.value?.includes(instrument.label)}
                                   onCheckedChange={(checked) => {
+                                    const currentInstruments = Array.isArray(field.value) ? field.value : [];
                                     return checked
-                                      ? field.onChange([...field.value, instrument.label])
+                                      ? field.onChange([...currentInstruments, instrument.label])
                                       : field.onChange(
-                                          field.value?.filter(
+                                          currentInstruments.filter(
                                             (value) => value !== instrument.label
                                           )
                                         );
@@ -292,19 +298,32 @@ export default function CreateMusicForm() {
         </Form>
 
         {composition && (
-          <div className="mt-8 p-6 bg-secondary/30 rounded-lg">
-            <h3 className="text-xl font-headline mb-4">Generated Composition:</h3>
-            <Card>
-              <CardHeader><CardTitle>Music Data</CardTitle></CardHeader>
-              <CardContent className="max-h-96 overflow-y-auto bg-muted/50 p-4 rounded">
-                <pre className="whitespace-pre-wrap text-sm">{composition.musicComposition}</pre>
-              </CardContent>
-            </Card>
-            <h4 className="text-lg font-headline mt-4 mb-2">Explanation:</h4>
-            <p className="text-muted-foreground whitespace-pre-wrap">{composition.explanation}</p>
-          </div>
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="font-headline flex items-center">
+                <Music2 className="mr-2 h-6 w-6 text-primary" />
+                AI Generated Composition
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="font-semibold">Composition:</h4>
+                <pre className="p-3 bg-muted/50 rounded-md text-sm whitespace-pre-wrap overflow-x-auto">
+                  {composition.musicComposition}
+                </pre>
+              </div>
+              <div>
+                <h4 className="font-semibold">Explanation:</h4>
+                <p className="text-muted-foreground text-sm">
+                  {composition.explanation}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </CardContent>
     </Card>
   );
 }
+
+    

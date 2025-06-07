@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
+  Form, 
   FormControl,
   FormDescription,
   FormField,
@@ -14,6 +14,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+
+import { MultiSelect } from "../ui/multi-select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/contexts/UserContext";
@@ -22,18 +24,20 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import { Loader2, Save, UploadCloud, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { storage } from "@/lib/firebase"; // Import Firebase storage
+import { storage } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { Progress } from "@/components/ui/progress";
 
+const GENRES = ["Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Blues", "Country", "R&B", "Folk", "Classical", "World", "Reggae", "Punk", "Metal", "Funk", "Soul", "Disco", "House", "Techno", "Trance", "Ambient", "Drum & Bass", "Indie", "Alternative", "Grime", "Dubstep", "Gospel", "Latin", "Afrobeat"];
+
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  genre: z.string().min(3, { message: "Genre must be at least 3 characters." }),
+  genre: z.array(z.string()).min(1, { message: "Please select at least one genre." }),
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio portfolio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video portfolio." }).optional().or(z.literal('')),
   reviews: z.string().optional(),
   indicativeRates: z.string().min(1, { message: "Indicative rates are required (e.g., $$, negotiable)." }),
-  profileImage: z.string().url({ message: "Profile image must be a valid URL." }).optional().or(z.literal('')), // This will store the URL
+  profileImage: z.string().url({ message: "Profile image must be a valid URL." }).optional().or(z.literal('')),
 });
 
 type ArtistProfileFormValues = z.infer<typeof formSchema>;
@@ -41,13 +45,11 @@ type ArtistProfileFormValues = z.infer<typeof formSchema>;
 export default function ArtistProfileForm() {
   const { getArtistProfile, updateArtistProfile, firebaseUser, userRole } = useUser();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false); // For overall form submission
-  const [isUploading, setIsUploading] = useState(false); // For file upload specifically
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null); // For local preview of new file
-
-  // Stores the currently saved profile image URL, or placeholder
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentProfileImage, setCurrentProfileImage] = useState(DEFAULT_ARTIST_PROFILE.profileImage);
 
   const defaultFormValues = firebaseUser && userRole === UserType.ARTIST
@@ -62,17 +64,32 @@ export default function ArtistProfileForm() {
   useEffect(() => {
     if (firebaseUser && userRole === UserType.ARTIST) {
       const profile = getArtistProfile(firebaseUser.uid);
-      form.reset(profile);
+      // Ensure genre is an array for the form
+      const formCompatibleProfile = {
+        ...profile,
+        genre: Array.isArray(profile.genre) 
+          ? profile.genre 
+          : (profile.genre && typeof profile.genre === 'string' ? [profile.genre] : [])
+      };
+      if (formCompatibleProfile.genre.length === 1 && formCompatibleProfile.genre[0] === '') {
+        formCompatibleProfile.genre = [];
+      }
+
+      form.reset(formCompatibleProfile);
       setCurrentProfileImage(profile.profileImage || DEFAULT_ARTIST_PROFILE.profileImage);
-      setImagePreview(null); // Clear local preview if profile is reloaded
+      setImagePreview(null); 
       setSelectedFile(null);
     } else {
-      form.reset({ ...DEFAULT_ARTIST_PROFILE, name: firebaseUser?.displayName || "Artist Name" });
+      const initialDefaults = { 
+        ...DEFAULT_ARTIST_PROFILE, 
+        name: firebaseUser?.displayName || "Artist Name",
+        genre: [] // Ensure genre is an empty array for new/non-artist users
+      };
+      form.reset(initialDefaults);
       setCurrentProfileImage(DEFAULT_ARTIST_PROFILE.profileImage);
     }
   }, [firebaseUser, userRole, getArtistProfile, form]);
 
-  // Update currentProfileImage when the form's profileImage URL changes (e.g., after successful upload and save)
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'profileImage') {
@@ -88,12 +105,12 @@ export default function ArtistProfileForm() {
     if (file) {
        if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({ title: "File Too Large", description: "Please select an image smaller than 5MB.", variant: "destructive"});
-        event.target.value = ""; // Reset file input
+        event.target.value = ""; 
         return;
       }
       setSelectedFile(file);
       setImagePreview(URL.createObjectURL(file));
-      form.setValue('profileImage', '', { shouldValidate: true, shouldDirty: true }); // Clear existing URL, mark form as dirty
+      form.setValue('profileImage', '', { shouldValidate: true, shouldDirty: true }); 
     }
   };
 
@@ -103,7 +120,6 @@ export default function ArtistProfileForm() {
       URL.revokeObjectURL(imagePreview);
       setImagePreview(null);
     }
-    // Reset to the original profile image URL if one was saved
     form.setValue('profileImage', currentProfileImage, { shouldValidate: true });
     const fileInput = document.getElementById('profile-image-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
@@ -147,24 +163,29 @@ export default function ArtistProfileForm() {
       } catch (error) {
         setIsUploading(false);
         setIsLoading(false);
-        return; // Stop submission if upload fails
+        return; 
       }
       setIsUploading(false);
     }
+    
+    // Convert genre array back to string for ArtistProfileData
+    const genreString = Array.isArray(values.genre) ? values.genre.join(', ') : '';
 
     const dataToSave: ArtistProfileData = {
       ...values,
-      profileImage: finalProfileImageUrl || DEFAULT_ARTIST_PROFILE.profileImage, // Ensure there's always a URL
-      dataAiHint: values.profileImage ? "musician portrait" : DEFAULT_ARTIST_PROFILE.dataAiHint, // Add a hint if a custom image is there
+      genre: genreString, // Save genre as string
+      profileImage: finalProfileImageUrl || DEFAULT_ARTIST_PROFILE.profileImage,
+      dataAiHint: values.profileImage ? "musician portrait" : DEFAULT_ARTIST_PROFILE.dataAiHint,
     };
 
     try {
       updateArtistProfile(firebaseUser.uid, dataToSave);
       toast({ title: "Profile Updated", description: "Your artist profile has been saved." });
-      setSelectedFile(null); // Clear selected file after successful save
-      setImagePreview(null); // Clear local preview
-      form.reset(dataToSave); // Reset form with the new values, including the potentially new image URL
-      setCurrentProfileImage(dataToSave.profileImage); // Explicitly update currentProfileImage state
+      setSelectedFile(null); 
+      setImagePreview(null);
+      // Reset form with values that are compatible with the form schema (genre as array)
+      form.reset({ ...values, profileImage: dataToSave.profileImage }); 
+      setCurrentProfileImage(dataToSave.profileImage); 
     } catch (error) {
       console.error("Failed to update profile:", error);
       toast({ title: "Error", description: "Failed to update profile. Please try again.", variant: "destructive" });
@@ -194,7 +215,7 @@ export default function ArtistProfileForm() {
             height={120}
             className="rounded-full object-cover aspect-square border"
             data-ai-hint="musician portrait"
-            onError={() => setCurrentProfileImage(DEFAULT_ARTIST_PROFILE.profileImage)} // Fallback if src is invalid
+            onError={() => setCurrentProfileImage(DEFAULT_ARTIST_PROFILE.profileImage)}
           />
           <div className="flex-grow w-full space-y-2">
             <FormLabel htmlFor="profile-image-upload">Profile Image</FormLabel>
@@ -218,7 +239,7 @@ export default function ArtistProfileForm() {
             <FormDescription>
               Upload an image (PNG, JPG, GIF, WEBP, max 5MB). If no file is uploaded, the existing URL will be kept.
             </FormDescription>
-            <FormField // Hidden field to store and validate the URL for react-hook-form
+            <FormField
               control={form.control}
               name="profileImage"
               render={({ field }) => ( <FormItem className="hidden"><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}
@@ -242,15 +263,32 @@ export default function ArtistProfileForm() {
         <FormField
           control={form.control}
           name="genre"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Main Genre</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Indie Rock, Electronic, Jazz Fusion" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const normalizedValue = Array.isArray(field.value)
+              ? field.value
+              : field.value === '' || field.value === null || field.value === undefined
+                ? []
+                : String(field.value).split(',').map(s => s.trim()).filter(s => s !== '');
+
+
+            return (
+              <FormItem>
+                <FormLabel>Genres</FormLabel>
+                <FormControl>
+                  <MultiSelect
+                    options={GENRES.map(genre => ({ label: genre, value: genre }))}
+                    placeholder="Select genres..."
+                    {...field}
+                    value={normalizedValue}
+                    onChange={(selectedValues: string[]) => {
+                      field.onChange(selectedValues);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
         <FormField
           control={form.control}
@@ -318,3 +356,5 @@ export default function ArtistProfileForm() {
     </Form>
   );
 }
+
+    
