@@ -1,6 +1,8 @@
 
+import { z } from 'zod';
 import type { LucideIcon } from 'lucide-react';
 import { LayoutDashboard, CalendarDays, Users, Sparkles, Music2, UserCircle, MessageSquare, FileText, Search, BarChart } from 'lucide-react';
+import { Timestamp } from 'firebase/firestore';
 
 export enum UserType {
   ORGANIZER = 'organizer',
@@ -14,6 +16,18 @@ export interface NavItem {
   icon: LucideIcon;
   allowedUsers: UserType[];
 }
+
+// User Profile Data
+export type UserProfile = {
+  uid: string; // Firebase UID
+  fullName?: string;
+  role: UserType;
+  email?: string;
+  createdAt?: Timestamp | string; // Firestore timestamp or ISO string
+  photoURL?: string; // From Firebase Auth, can be a fallback
+  genre?: string; // Generic genre, mainly for initial artist setup if needed
+  artistProfileData?: ArtistProfileData; // Detailed artist-specific profile
+};
 
 export const APP_NAME = "OBSESSION";
 
@@ -33,7 +47,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label: 'Suggest Artists',
     href: '/dashboard/suggest-artists',
-    icon: Users, // Using Users icon as per previous implementation for suggestions
+    icon: Users,
     allowedUsers: [UserType.ORGANIZER],
   },
   {
@@ -84,13 +98,14 @@ export type EventItem = {
 };
 
 export type ArtistProfileData = {
-  name: string;
-  genre: string;
-  portfolioAudio: string;
-  portfolioVideo: string;
-  reviews: string; // Placeholder for actual review system
+  name: string; // Artist/Band Name
+  genre: string; // Main genre
+  portfolioAudio: string; // URL
+  portfolioVideo: string; // URL
+  reviews: string; // Text block for now
   indicativeRates: string;
-  profileImage: string;
+  profileImage: string; // URL to the image in Firebase Storage or placeholder
+  dataAiHint?: string; // Optional hint for AI image services if this image is used as a base
 };
 
 export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
@@ -101,60 +116,64 @@ export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
   reviews: 'No reviews yet.',
   indicativeRates: '',
   profileImage: 'https://placehold.co/150x150.png',
+  dataAiHint: 'abstract musician',
 };
 
 
-export type GeneratedContractStatus = 
-  | "draft" 
-  | "pending_artist_signature" 
-  | "pending_organizer_signature" // May not be used if organizer signs first
-  | "signed_by_organizer" // Could be an interim status
-  | "signed_by_artist" // Could be an interim status
-  | "signed" // Replaces "active" or "completed" for mutual signature
-  | "completed" // For post-event fulfillment tracking
+export type GeneratedContractStatus =
+  | "draft"
+  | "pending_artist_signature"
+  | "pending_organizer_signature"
+  | "signed_by_organizer"
+  | "signed_by_artist"
+  | "signed"
+  | "completed"
   | "cancelled";
 
 export type GeneratedContractData = {
   id: string;
-  organizerId: string; // Firebase UID
+  organizerId: string;
   organizerName: string;
-  artistId?: string; // Firebase UID - to be filled later if artist exists on platform
-  artistName: string; // Name entered by organizer
+  artistId?: string;
+  artistName: string;
   eventName: string;
-  eventDate: string; // ISO String
+  eventDate: string;
   eventLocation: string;
   fee: string;
-  clauses: string; // Custom clauses added by organizer
+  clauses: string;
   status: GeneratedContractStatus;
-  createdAt: string; // ISO String
+  createdAt: string;
   signedByOrganizer: boolean;
   signedByArtist: boolean;
-  // contractUrl?: string; // Link to PDF in Firebase Storage - for future
-  // signedByBoth: boolean; // Can be derived from signedByOrganizer && signedByArtist or use status "signed"
 };
 
 
 // Messaging System Data
-export const CURRENT_USER_MOCK_ID = 'currentUserMockId'; // Represents the logged-in user
+export const CURRENT_USER_MOCK_ID = 'currentUserMockId';
 
 export interface Message {
   id: string;
-  senderId: string; // Use CURRENT_USER_MOCK_ID for the logged-in user, or another ID for contact
+  senderId: string;
   text: string;
-  timestamp: string; // ISO string e.g. new Date().toISOString()
+  timestamp: string;
 }
 
 export interface Conversation {
   id: string;
   contactId: string;
   contactName: string;
-  contactAvatar: string; // URL
-  contactRole: UserType; // Organizer or Artist
+  contactAvatar: string;
+  contactRole: string; // Keep as string: 'artist' or 'organizer' based on MOCK_CONVERSATIONS
   lastMessagePreview: string;
-  lastMessageTimestamp: string; // ISO string
+  lastMessageTimestamp: string;
   unreadCount: number;
   messages: Message[];
+  // Firebase specific fields, if directly mapping from Firestore
+  participants?: string[]; // Array of Firebase UIDs
+  // Unread count might be an object if stored per participant:
+  // unreadCount?: { [userId: string]: number };
 }
+
 
 export const MOCK_CONVERSATIONS: Conversation[] = [
   {
@@ -213,7 +232,47 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     messages: [
       { id: 'msg-4-1', senderId: 'artist-delta', text: "My availability for next month is open. Let me know what dates you're considering.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
     ],
-  }
+  },
 ];
 
-    
+
+export const userProfileSchema = z.object({
+  uid: z.string(),
+  fullName: z.string().optional(),
+  role: z.nativeEnum(UserType), // Use nativeEnum for UserType
+  genre: z.string().optional(),
+  email: z.string().email().optional(),
+  createdAt: z.union([z.string(), z.instanceof(Timestamp)]).optional(), // Allow string or Timestamp
+  photoURL: z.string().url().optional(),
+  artistProfileData: z.custom<ArtistProfileData>().optional(), // Zod doesn't have a direct way to validate nested complex types without defining them fully.
+                                                              // Use z.custom or define ArtistProfileDataSchema if strict validation is needed here.
+});
+
+// ArtistContractItem is used for the Artist's view of contracts, adapted from GeneratedContractData
+export type ArtistContractItem = {
+  id: string;
+  eventName: string;
+  organizerName: string;
+  dateProposed: string; // Formatted date string
+  scopeOfWork: string;
+  paymentAmount: string;
+  paymentTerms: string;
+  contractTerms: string; // Full clauses
+  status: 'Pending Review' | 'Accepted' | 'Declined' | 'Fulfilled' | 'Cancelled'; // Simplified for artist view
+};
+
+// Mock data for artist contracts - keep this simple or derive from GeneratedContractData if needed
+export const MOCK_ARTIST_CONTRACTS: ArtistContractItem[] = [
+  {
+    id: 'mock-contract-1',
+    eventName: 'City Summer Fest',
+    organizerName: 'City Events Co.',
+    dateProposed: 'July 15, 2024',
+    scopeOfWork: '60-minute live performance, original songs and select covers.',
+    paymentAmount: '$1200',
+    paymentTerms: '50% deposit, 50% on event day.',
+    contractTerms: "Full contract details including rider, cancellation policy...",
+    status: 'Pending Review',
+  },
+  // ... more mock contracts for artist view
+];

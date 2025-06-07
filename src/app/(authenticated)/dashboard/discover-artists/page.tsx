@@ -5,9 +5,10 @@ import { ArtistCard } from '@/components/cards/ArtistCard';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserType, type UserProfile } from '@/lib/constants';
+import { userProfileConverter } from '@/lib/firestoreConverter';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 
@@ -18,33 +19,29 @@ export default function DiscoverArtistsPage() {
   const [allArtists, setAllArtists] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     if (!userLoading) {
       if (userRole !== UserType.ORGANIZER) {
+        setIsRedirecting(true);
         router.push('/dashboard'); // Redirect if not an organizer
       } else {
-        const fetchArtists = async () => {
-          try {
-            const artistsCollection = collection(db, 'users');
-            const artistQuery = query(artistsCollection, where('role', '==', 'artist')); // Filter for lowercase 'artist'
-            const artistSnapshot = await getDocs(artistQuery);
+        setIsRedirecting(false); // Ensure isRedirecting is false for organizers
+        const q = query(collection(db, 'users'), where('role', '==', 'artist')); // Filter for lowercase 'artist'
 
-            const artistsData = artistSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...(doc.data() as UserProfile),
-            }));
+        const unsubscribe = onSnapshot(q.withConverter(userProfileConverter), (querySnapshot) => {
+          const artistsData = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(), // Data is already validated and converted by the converter
+          }));
+          setAllArtists(artistsData);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching artists:", error);
+          setLoading(false); // Consider handling this error in the UI
+        });
 
-
-            setAllArtists(artistsData);
-            setLoading(false);
-          } catch (error) {
-            console.error("Error fetching artists:", error);
-            setLoading(false);
-          }
-        };
-
-        fetchArtists();
       }
     }
 
@@ -55,8 +52,8 @@ export default function DiscoverArtistsPage() {
     (artist.genre && artist.genre.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  if (userLoading) {
-    return <p>Loading user data...</p>;
+  if (isRedirecting) {
+    return <p>Redirecting...</p>;
   }
 
   if (userRole !== UserType.ORGANIZER) {
@@ -79,8 +76,8 @@ export default function DiscoverArtistsPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-
- {loading ? (
+ {/* Conditional rendering based on loading and filteredArtists */}
+      {loading ? (
  <p className="text-center py-8">Loading artists...</p>
  ) : filteredArtists.length === 0 ? (
  <p className="text-muted-foreground text-center py-8">No artists found matching your criteria. Try a different search.</p>

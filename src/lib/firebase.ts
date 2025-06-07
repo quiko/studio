@@ -32,8 +32,8 @@ if (getApps().length === 0) {
 if (typeof window !== 'undefined') {
   try {
     // Ensure you have these in your .env or .env.local file
-    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    const debugTokenFromEnv = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
+    const recaptchaSiteKey = "6LcMZFMrAAAAAPch6lMWFxSvQgjzp_50PsEUXxJA";
+    const debugTokenFromEnv ="BC875472-F16B-4071-AFE1-66676AC98D79";
 
     // Log the values for easier debugging during setup
     // console.log("Firebase Init: NEXT_PUBLIC_RECAPTCHA_SITE_KEY:", recaptchaSiteKey);

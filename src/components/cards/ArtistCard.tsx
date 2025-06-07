@@ -23,7 +23,7 @@ export function ArtistCard({ artist }: ArtistCardProps) {
         <Image 
             src={profileImage} 
             alt={artistName} 
-            layout="fill" 
+            fill={true} 
             objectFit="cover" 
             data-ai-hint={artist.artistProfileData?.dataAiHint || "musician profile"}
         />
