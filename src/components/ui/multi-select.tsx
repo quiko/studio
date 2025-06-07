@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown, X } from 'lucide-react';
 
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -19,7 +19,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
 import {
   FormControl,
   FormItem,
@@ -52,17 +51,15 @@ export const MultiSelect = React.forwardRef<
   const [selectedValues, setSelectedValues] = React.useState<string[]>(value || []);
 
   React.useEffect(() => {
-      setSelectedValues(value || []);
+    setSelectedValues(value || []);
   }, [value]);
 
   const handleSelect = (currentValue: string) => {
     const isSelected = selectedValues.includes(currentValue);
-    let newSelectedValues;
-    if (isSelected) {
-      newSelectedValues = selectedValues.filter((val) => val !== currentValue);
-    } else {
-      newSelectedValues = [...selectedValues, currentValue];
-    }
+    const newSelectedValues = isSelected
+      ? selectedValues.filter((val) => val !== currentValue)
+      : [...selectedValues, currentValue];
+
     setSelectedValues(newSelectedValues);
     onChange(newSelectedValues);
     onSelect && onSelect(newSelectedValues);
@@ -97,13 +94,12 @@ export const MultiSelect = React.forwardRef<
                 {selectedValues.length === 0 ? (
                   placeholder
                 ) : (
-                  (Array.isArray(selectedValues) ? selectedValues : []).map((value) => {
-                    const option = options.find(opt => opt.value === value);
+                  selectedValues.map((value) => {
+                    const option = options.find((opt) => opt.value === value);
                     return (
                       <Badge key={value} variant="secondary" className="flex items-center">
                         {option?.label || value}
-                        <button
-                          type="button"
+                        <span
                           className="ml-1 text-xs cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -111,7 +107,7 @@ export const MultiSelect = React.forwardRef<
                           }}
                         >
                           <X className="h-3 w-3" />
-                        </button>
+                        </span>
                       </Badge>
                     );
                   })
@@ -131,9 +127,7 @@ export const MultiSelect = React.forwardRef<
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={() => {
-                      handleSelect(option.value);
-                    }}
+                    onSelect={() => handleSelect(option.value)}
                     className={cn(
                       'cursor-pointer',
                       selectedValues.includes(option.value) && 'font-semibold'
