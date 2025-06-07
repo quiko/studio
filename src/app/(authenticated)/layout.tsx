@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  const { firebaseUser, userRole, isLoading, logout } = useUser(); // Changed to firebaseUser, userRole
+  const { firebaseUser, userRole, isLoading, logout, getArtistProfile } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -64,6 +64,17 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   const userInitial = firebaseUser?.email?.charAt(0).toUpperCase() || (userRole === UserType.ARTIST ? 'A' : userRole === UserType.ORGANIZER ? 'O' : 'U');
   const userRoleDisplay = userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
+  let avatarSrc = `https://placehold.co/40x40.png?text=${userInitial}`;
+  let avatarHint = "abstract initial";
+
+  if (firebaseUser && userRole === UserType.ARTIST) {
+    const artistProfile = getArtistProfile(firebaseUser.uid);
+    if (artistProfile && artistProfile.profileImage && artistProfile.profileImage !== 'https://placehold.co/150x150.png') { // Check against default placeholder
+      avatarSrc = artistProfile.profileImage;
+      avatarHint = artistProfile.dataAiHint || "musician portrait";
+    }
+  }
+
   return (
     <SidebarProvider defaultOpen>
       <Sidebar>
@@ -94,7 +105,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
         <SidebarFooter className="p-4">
            <div className="flex items-center gap-2 mb-2">
             <Avatar>
-              <AvatarImage src={`https://placehold.co/40x40.png?text=${userInitial}`} alt={userRoleDisplay} data-ai-hint="abstract initial"/>
+              <AvatarImage src={avatarSrc} alt={userRoleDisplay} data-ai-hint={avatarHint}/>
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
