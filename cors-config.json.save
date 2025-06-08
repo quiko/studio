@@ -1,0 +1,27 @@
+sudo apt-get install apt-transport-https ca-certificates gnupg
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add /usr/share/keyrings/cloud.google.gpg
+[
+    {      "origin": ["https://9000-firebase-studio-1748707151897.cluster-l6vkdperq5ebaqo3qy4ksvoqom.cloudworkstations.dev"],
+      "method": ["GET", "PUT", "POST", "DELETE"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+gsutil cors set cors-config.json gs://maestroai-byliq.appspot.com
+
+gsutil cors set cors-config.json gs://maestroai-byliq.appspot.comgsutil cors set cors-config.json gs://maestroai-byliq.appspot.com
+gsutil cors set cors-config.json gs://maestroai-byliq.appspot.com
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+
+sudo apt-get install apt-transport-https ca-certificates gnupg
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add /usr/share/keyrings/cloud.google.gpg
+
+sudo apt-get update && sudo apt-get install google-cloud-sdk
+
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+gcloud auth login
+gcloud auth login
+gcloud config set project maestroai-byliq
+gsutil cors set cors-config.json gs://maestroai-byliq.appspot.com
+

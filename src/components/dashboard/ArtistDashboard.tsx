@@ -19,7 +19,7 @@ export default function ArtistDashboard() {
     <div className="grid gap-6">
        <Card className="hover:shadow-lg transition-shadow">
         <CardHeader className="flex flex-row items-center gap-4">
-          <Image src={profile.profileImage || "https://placehold.co/80x80.png"} alt={profile.name || "Artist"} width={80} height={80} className="rounded-full" data-ai-hint="musician portrait" />
+          <Image src={profile.profileImage || "https://placehold.co/80x80.png"} alt={profile.name || "Artist"} width={80} height={80} className="rounded-full w-auto" data-ai-hint="musician portrait" priority />
           <div>
             <CardTitle className="font-headline text-2xl">{profile.name || "Your Artist Name"}</CardTitle>
             <CardDescription>{profile.genre || "Your Genre"}</CardDescription>

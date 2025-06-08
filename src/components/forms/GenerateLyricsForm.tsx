@@ -15,55 +15,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createMusic } from "@/ai/flows/create-music";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { generateLyrics } from "@/ai/flows/generate-lyrics";
+import { GenerateLyricsInputSchema, type GenerateLyricsInput, type GenerateLyricsOutput } from "@/ai/types";
 import { useState } from "react";
-import { Loader2, Music2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, Edit, Music2 } from "lucide-react"; // Added Music2 for output card
 import { useToast } from "@/hooks/use-toast";
 
-const instrumentsList = [
-  { id: "piano", label: "Piano" },
-  { id: "acoustic_guitar", label: "Guitar (Acoustic)" },
-  { id: "electric_guitar", label: "Guitar (Electric)" },
-  { id: "bass_guitar", label: "Bass Guitar" },
-  { id: "drums", label: "Drums" },
-  { id: "violin", label: "Violin" },
-  { id: "cello", label: "Cello" },
-  { id: "trumpet", label: "Trumpet" },
-  { id: "saxophone", label: "Saxophone" },
-  { id: "flute", label: "Flute" },
-  { id: "synthesizer", label: "Synthesizer" },
-  { id: "vocals_lead", label: "Vocals (Lead)" },
-  { id: "vocals_backup", label: "Vocals (Backup)" },
-  { id: "strings_ensemble", label: "Strings Ensemble" },
-  { id: "brass_section", label: "Brass Section" },
-  { id: "sampler", label: "Sampler / Sequencer" },
-];
-
-const genreList = [
-  "Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Classical", "Blues",
-  "Country", "Folk", "Reggae", "R&B", "Soul", "Metal", "Punk",
-  "Funk", "Disco", "Techno", "House", "Trance", "Ambient", "Lo-fi",
-  "Synthwave", "Orchestral", "World", "Indie"
-].sort();
-
-const moodList = [
-  "Happy", "Sad", "Energetic", "Relaxing", "Chill", "Epic", "Melancholic",
-  "Romantic", "Mysterious", "Dark", "Uplifting", "Peaceful", "Intense",
-  "Groovy", "Nostalgic", "Dreamy", "Experimental"
-].sort();
-
-const styleVariationList = [
-  "Acoustic", "Orchestral", "Electronic", "Minimalist", "Ambient",
-  "8-bit / Chiptune", "Cinematic", "Lo-fi", "Synthwave", "Live Band Feel",
-  "Unplugged", "Experimental"
-].sort();
-
-import { type CreateMusicOutput, type CreateMusicInput } from "@/ai/types";
-
-// Define the list of popular music genres
 const popularGenres = [
   "Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Classical", "Blues",
   "Country", "Folk", "Reggae", "R&B", "Soul", "Metal", "Punk",
@@ -71,54 +31,60 @@ const popularGenres = [
   "Synthwave", "Orchestral", "World", "Indie"
 ].sort();
 
-const formSchema = z.object({
-  genre: z.array(z.string()).refine((value) => value.length > 0, { message: "Please select at least one genre." }),
-  mood: z.string().min(1, { message: "Please select a mood." }),
-  instruments: z.array(z.string()).refine((value) => value.length > 0, {
-    message: "Please select at least one instrument.",
-  }),
-  length: z.string().min(1, { message: "Please select a length." }),
-  styleVariation: z.string().optional(),
-});
+const popularMoods = [
+  "Happy", "Sad", "Energetic", "Relaxing", "Chill", "Epic", "Melancholic",
+  "Romantic", "Mysterious", "Dark", "Uplifting", "Peaceful", "Intense",
+  "Groovy", "Nostalgic", "Dreamy", "Experimental"
+].sort();
 
-export default function CreateMusicForm() {
+const assistanceTypes = [
+  { value: "complete_lyrics", label: "Complete Lyrics" },
+  { value: "lyric_ideas", label: "Lyric Ideas & Snippets" },
+  { value: "frame_suggestions", label: "Structural Frames & Rhyme Schemes" },
+];
+
+const formSchema = GenerateLyricsInputSchema;
+type LyricsFormValues = z.infer<typeof formSchema>;
+
+export function GenerateLyricsForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [composition, setComposition] = useState<CreateMusicOutput | null>(null);
+  const [lyricsOutput, setLyricsOutput] = useState<GenerateLyricsOutput | null>(null);
   const { toast } = useToast();
 
- const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<LyricsFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       genre: "",
       mood: "",
-      instruments: [],
-      length: "medium",
-      styleVariation: "", // Empty string will show placeholder by default
+      theme: "",
+      assistanceType: "complete_lyrics",
+      keywords: "",
+      desiredStructure: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: LyricsFormValues) {
     setIsLoading(true);
-    setComposition(null);
+    setLyricsOutput(null);
     try {
-      const submissionValues: CreateMusicInput = {
-        genre: values.genre.join(', '), // Join genres for the API call
-        mood: values.mood,
-        instruments: values.instruments.join(', '),
-        length: values.length,
-        styleVariation: (values.styleVariation === "__NONE__" || values.styleVariation === "") ? undefined : values.styleVariation,
+      const submissionValues: GenerateLyricsInput = {
+        ...values,
+        keywords: values.keywords || undefined,
+        desiredStructure: values.desiredStructure || undefined,
       };
-      const result = await createMusic(submissionValues);
-      setComposition(result);
+      const result = await generateLyrics(submissionValues);
+      setLyricsOutput(result);
       toast({
-        title: "Music Generated!",
-        description: "AI has created a music composition for you.",
+        title: "Lyrics Generated!",
+        description: "AI has crafted some lyrical content for you.",
       });
     } catch (error) {
-      console.error("Error creating music:", error);
+      console.error("Error generating lyrics:", error);
       toast({
-        title: "Error",
-        description: "Failed to generate music. Please try again.",
+        title: "Error Generating Lyrics",
+        description: (error instanceof Error && error.message.includes("blocked")) 
+          ? "Content generation was blocked by safety filters. Please revise your input."
+          : "Failed to generate lyrics. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -129,64 +95,32 @@ export default function CreateMusicForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline flex items-center">
-          Artist Profile
+        <CardTitle className="font-headline text-2xl flex items-center">
+          <Edit className="mr-2 h-6 w-6 text-primary" />
+          AI Lyric Generator
         </CardTitle>
+        <CardDescription>
+          Craft compelling lyrics with AI assistance. Choose your genre, mood, theme, and let the AI inspire you.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid md:grid-cols-2 gap-6">
               <FormField
- control={form.control}
- name="genre"
- render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Genres</FormLabel>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
- {popularGenres.map((genre) => (
- <FormField
- key={genre}
- control={form.control}
- name="genre"
- render={({ field }) => (
- <FormItem className="flex flex-row items-start space-x-3 space-y-0">
- <FormControl>
- <Checkbox
- checked={field.value?.includes(genre)}
- onCheckedChange={(checked) => {
- return checked
- ? field.onChange([...field.value, genre])
- : field.onChange(field.value?.filter((value) => value !== genre));
- }}
- />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {genre}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
- )}
- />
-              <FormField
                 control={form.control}
-                name="mood"
+                name="genre"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mood</FormLabel>
- <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel>Genre</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a mood" />
+                          <SelectValue placeholder="Select a genre" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {moodList.map((mood) => (
+                        {popularGenres.map((genre) => (
                           <SelectItem key={genre} value={genre}>{genre}</SelectItem>
                         ))}
                       </SelectContent>
@@ -194,101 +128,22 @@ export default function CreateMusicForm() {
                     <FormMessage />
                   </FormItem>
                 )}
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="instruments"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Instruments</FormLabel>
-                    <FormDescription>
-                      Select the instruments you'd like in your composition.
-                    </FormDescription>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {instrumentsList.map((instrument) => (
-                      <FormField
-                        key={instrument.id}
-                        control={form.control}
-                        name="instruments"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={instrument.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(instrument.label)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, instrument.label])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== instrument.label
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {instrument.label}
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid md:grid-cols-2 gap-6">
-               <FormField
-                control={form.control}
-                name="length"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Length</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select desired length" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="short">Short (approx. 1 min)</SelectItem>
-                        <SelectItem value="medium">Medium (approx. 2-3 mins)</SelectItem>
-                        <SelectItem value="long">Long (approx. 4-5 mins)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
               />
               <FormField
                 control={form.control}
-                name="styleVariation"
+                name="mood"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stylistic Variation (Optional)</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel>Mood</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a stylistic variation (optional)" />
+                          <SelectValue placeholder="Select a mood" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__NONE__">None</SelectItem>
-                        {styleVariationList.map((style) => (
-                          <SelectItem key={style} value={style}>{style}</SelectItem>
+                        {popularMoods.map((mood) => (
+                          <SelectItem key={mood} value={mood}>{mood}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -297,21 +152,120 @@ export default function CreateMusicForm() {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="theme"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Theme</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Summer romance, overcoming adversity, city nightlife" {...field} />
+                  </FormControl>
+                  <FormDescription>What is the central idea or topic of your lyrics?</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="assistanceType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type of Assistance</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select assistance type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {assistanceTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>How much help do you need from the AI?</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="keywords"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Keywords/Phrases (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Starlight, heartbeat, endless road" {...field} />
+                    </FormControl>
+                    <FormDescription>Any specific words or phrases to include?</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="desiredStructure"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Desired Lyric Structure (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Verse-Chorus-Verse-Chorus-Bridge" {...field} />
+                    </FormControl>
+                    <FormDescription>Suggest a structure like AABA or Verse-Chorus.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Composing...
+                  Generating Lyrics...
                 </>
               ) : (
                 <>
                   <Wand2 className="mr-2 h-4 w-4" />
-                  Create Music
+                  Generate Lyrics
                 </>
               )}
             </Button>
           </form>
         </Form>
+
+        {lyricsOutput && (
+          <Card className="mt-8 bg-secondary/30">
+            <CardHeader>
+              <CardTitle className="font-headline flex items-center">
+                <Music2 className="mr-2 h-6 w-6 text-primary" />
+                AI Generated Lyrical Content
+              </CardTitle>
+              <CardDescription>Type: {lyricsOutput.contentType}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-lg mb-1">Generated Content:</h4>
+                <pre className="p-4 bg-background/70 rounded-md text-sm whitespace-pre-wrap overflow-x-auto max-h-96">
+                  {lyricsOutput.generatedContent}
+                </pre>
+              </div>
+              {lyricsOutput.explanation && (
+                <div>
+                  <h4 className="font-semibold text-lg mb-1">Explanation/Suggestions:</h4>
+                  <p className="text-muted-foreground text-sm whitespace-pre-wrap">
+                    {lyricsOutput.explanation}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </CardContent>
     </Card>
   );
