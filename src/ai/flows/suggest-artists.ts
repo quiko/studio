@@ -15,7 +15,7 @@ import {z} from 'genkit';
 const SuggestArtistsInputSchema = z.object({
   eventType: z.string().describe('The type of event (e.g., Corporate Event, Wedding, Festival).'),
   budgetRange: z.string().describe('The estimated budget range for the artist (e.g., $500-$1000, Negotiable).'),
-  musicGenrePreference: z.string().describe('The preferred music genre for the event.'), // Changed from z.array(z.string()) and updated description
+  musicGenrePreference: z.string().describe('The preferred music genre for the event.'),
   specificEventDate: z.date().describe('The specific date for the event.').optional(),
   eventTimeOfDay: z.string().describe('The desired time of day for the event (e.g., Evening, Afternoon, or a specific hourly range like "08:00 - 09:00", "23:00 - 00:00", or "Any Time").').optional(),
   numberOfGuests: z.string().describe('The estimated number of guests (e.g., 50-100, 250+).').optional(),
@@ -49,15 +49,19 @@ const prompt = ai.definePrompt({
   Event Type: {{{eventType}}}
   Budget Range: {{{budgetRange}}}
   Music Genre Preference: {{{musicGenrePreference}}}
+
   {{#if specificEventDate}}
   Desired Event Date: {{{specificEventDate}}}
   {{/if}}
+
   {{#if eventTimeOfDay}}
   Desired Time of Day: {{{eventTimeOfDay}}}
   {{/if}}
+
   {{#if numberOfGuests}}
   Estimated Number of Guests: {{{numberOfGuests}}}
   {{/if}}
+
   {{#if additionalDetails}}
   Additional Event Details: {{{additionalDetails}}}
   {{/if}}
@@ -78,5 +82,3 @@ const suggestArtistsFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
