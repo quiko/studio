@@ -19,7 +19,6 @@ import {
   SidebarFooter,
   SidebarInset,
   SidebarTrigger,
-  SidebarMenuBadge, // Added SidebarMenuBadge
 } from '@/components/ui/sidebar';
 import { LogoIcon } from '@/components/icons/LogoIcon';
 import { LogOut } from 'lucide-react';
@@ -96,10 +95,12 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
                 >
                   <Link href={item.href} className="flex items-center w-full">
                     <item.icon />
-                    <span className="flex-1">{item.label}</span>
-                    {item.label === 'Messages' && totalUnreadMessagesCount > 0 && (
-                      <SidebarMenuBadge>{totalUnreadMessagesCount > 9 ? '9+' : totalUnreadMessagesCount}</SidebarMenuBadge>
-                    )}
+                    <span className="flex-1 flex items-center">
+                      {item.label}
+                      {item.label === 'Messages' && totalUnreadMessagesCount > 0 && (
+                        <span className="indicator"></span>
+                      )}
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -136,4 +137,3 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     </SidebarProvider>
   );
 }
-
