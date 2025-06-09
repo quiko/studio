@@ -19,6 +19,7 @@ import {
   SidebarFooter,
   SidebarInset,
   SidebarTrigger,
+  SidebarMenuBadge, // Added SidebarMenuBadge
 } from '@/components/ui/sidebar';
 import { LogoIcon } from '@/components/icons/LogoIcon';
 import { LogOut } from 'lucide-react';
@@ -26,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  const { firebaseUser, userRole, isLoading, logout, getArtistProfile } = useUser();
+  const { firebaseUser, userRole, isLoading, logout, getArtistProfile, totalUnreadMessagesCount } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -93,9 +94,12 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
                   isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
                   tooltip={{ children: item.label, side: 'right' }}
                 >
-                  <Link href={item.href}>
+                  <Link href={item.href} className="flex items-center w-full">
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {item.label === 'Messages' && totalUnreadMessagesCount > 0 && (
+                      <SidebarMenuBadge>{totalUnreadMessagesCount > 9 ? '9+' : totalUnreadMessagesCount}</SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -132,3 +136,4 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     </SidebarProvider>
   );
 }
+

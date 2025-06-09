@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore'; // Added collection, query, where, onSnapshot
 import { auth, db } from '@/lib/firebase';
 import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE, type GeneratedContractData, type GeneratedContractStatus } from '@/lib/constants';
 
@@ -25,6 +25,7 @@ interface UserContextType {
   addOrganizerContract: (contractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'>) => void;
   artistSignsContract: (contractId: string) => void;
   organizerSignsContract: (contractId: string) => void;
+  totalUnreadMessagesCount: number; // New field for unread messages
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -38,6 +39,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<UserType>(UserType.NONE);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalUnreadMessagesCount, setTotalUnreadMessagesCount] = useState(0);
 
   const [events, setEvents] = useState<EventItem[]>([]);
   const [artistProfiles, setArtistProfiles] = useState<Record<string, ArtistProfileData>>({});
@@ -59,7 +61,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load data from localStorage", error);
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
@@ -81,12 +83,43 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setFirebaseUser(null);
         setUserRole(UserType.NONE);
+        setTotalUnreadMessagesCount(0); // Reset unread count on logout
       }
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
+
+  // Listener for unread messages count
+  useEffect(() => {
+    if (!firebaseUser?.uid) {
+      setTotalUnreadMessagesCount(0);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', firebaseUser.uid)
+    );
+
+    const unsubscribeConversations = onSnapshot(q, (snapshot) => {
+      let unreadCount = 0;
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.unreadCount && data.unreadCount[firebaseUser.uid]) {
+          unreadCount += data.unreadCount[firebaseUser.uid];
+        }
+      });
+      setTotalUnreadMessagesCount(unreadCount);
+    }, (error) => {
+      console.error("Error fetching unread messages count:", error);
+      setTotalUnreadMessagesCount(0); // Reset on error
+    });
+
+    return () => unsubscribeConversations();
+  }, [firebaseUser?.uid]);
+
 
   const setUserRoleState = (role: UserType) => {
     setUserRole(role);
@@ -202,7 +235,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       logout,
       events, addEvent, updateEvent, deleteEvent, 
       artistProfiles, getArtistProfile, updateArtistProfile,
-      organizerContracts, addOrganizerContract, organizerSignsContract, artistSignsContract
+      organizerContracts, addOrganizerContract, organizerSignsContract, artistSignsContract,
+      totalUnreadMessagesCount
     }}>
       {children}
     </UserContext.Provider>
