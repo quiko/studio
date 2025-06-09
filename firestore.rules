@@ -3,44 +3,58 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Users collection:
+    // - Authenticated users can read any user's profile (e.g., for artist discovery/suggestions).
+    // - Users can create their own profile document when they sign up.
+    // - Users can update their own profile document.
     match /users/{userId} {
-      // Allow any authenticated user to read user profiles (e.g., for contact names, avatars in messages)
       allow read: if request.auth != null;
-      // User can create their own profile document
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // User can update their own profile document
-      allow update: if request.auth != null && request.auth.uid == userId;
-      // Deleting user documents is typically an administrative action or handled with specific logic
-      allow delete: if false;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow delete: if false; // Generally safer to disallow deletes initially
     }
 
+    // Conversations collection:
+    // - Users can create a conversation if they are one of the participants listed in the new conversation.
+    // - Users can read or update a conversation (e.g., last message, unread counts) if they are a participant.
     match /conversations/{conversationId} {
-      // A user can read or update a conversation document if their UID is in the 'participants' array.
-      allow read, update: if request.auth != null && request.auth.uid in resource.data.participants;
-      // A user can create a conversation document if:
-      // 1. They are authenticated.
-      // 2. Their UID is included in the 'participants' array of the new document.
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
-      // Deleting conversations might be restricted or allowed based on specific app logic
-      allow delete: if false; // For now, disallow direct deletion by users.
+      allow create: if request.auth.uid in request.resource.data.participants;
+      allow read, update: if request.auth.uid in resource.data.participants;
+      allow delete: if false; // Deleting conversations can be complex, disallow for now
 
+      // Messages subcollection within a conversation:
+      // - Users can create a message (send) if their UID matches the senderId in the message
+      //   and they are a participant in the parent conversation.
+      // - Users can read messages if they are a participant in the parent conversation.
       match /messages/{messageId} {
-        // A user can read messages if they are a participant of the parent conversation.
-        allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        // A user can create (send) a message if:
-        // 1. They are authenticated.
-        // 2. Their UID matches the 'senderId' in the new message document.
-        // 3. Their UID is in the 'participants' list of the parent conversation document.
-        allow create: if request.auth != null &&
-                         request.auth.uid == request.resource.data.senderId &&
-                         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        // Generally, disallow updating or deleting messages to maintain chat integrity and history.
-        allow update, delete: if false;
+        allow create: if request.auth.uid == request.resource.data.senderId &&
+                       request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow update, delete: if false; // Disallow editing/deleting individual messages for simplicity
       }
     }
-    // Default deny all other paths
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Events collection (assuming events have an 'organizerId' field matching the creator's UID)
+    // Note: Your current EventItem type and addEvent logic in UserContext use localStorage.
+    // These rules are for if/when events are moved to Firestore.
+    match /events/{eventId} {
+      allow read: if request.auth != null; // Allow any authenticated user to read event details.
+      // Assumes event documents will have an 'organizerId' field.
+      allow create: if request.auth.uid == request.resource.data.organizerId;
+      allow update, delete: if request.auth.uid == resource.data.organizerId;
+    }
+
+    // Contracts collection (assuming contracts have 'organizerId' and 'artistId' fields)
+    match /contracts/{contractId} {
+      // Users can read a contract if they are the organizer or the artist involved.
+      allow read: if request.auth.uid == resource.data.organizerId || request.auth.uid == resource.data.artistId;
+      // Organizers can create contracts.
+      allow create: if request.auth.uid == request.resource.data.organizerId;
+      // Either the organizer or the artist can update a contract (e.g., to change status, sign it).
+      allow update: if request.auth.uid == resource.data.organizerId || request.auth.uid == resource.data.artistId;
+      // Organizer can delete a contract only if it's in 'draft' status.
+      allow delete: if request.auth.uid == resource.data.organizerId && resource.data.status == "draft";
     }
   }
 }
