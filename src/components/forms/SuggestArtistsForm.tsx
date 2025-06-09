@@ -26,7 +26,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { MultiSelect } from "@/components/ui/multi-select";
+// Removed MultiSelect import as it's no longer used
 
 const eventTypes = [
   "Corporate Event", "Private Party", "Wedding", "Festival", "Concert", 
@@ -65,7 +65,7 @@ const numberOfGuestsOptions = [
 const formSchema = z.object({
   eventType: z.string().min(1, { message: "Please select an event type." }),
   budgetRange: z.string().min(1, { message: "Please select a budget range." }),
-  musicGenrePreference: z.array(z.string()).min(1, { message: "Please select at least one music genre." }),
+  musicGenrePreference: z.string().min(1, { message: "Please select a music genre." }), // Changed from array to string
   specificEventDate: z.date().optional(),
   eventTimeOfDay: z.string().optional(),
   numberOfGuests: z.string().optional(),
@@ -82,7 +82,7 @@ export default function SuggestArtistsForm() {
     defaultValues: {
       eventType: "",
       budgetRange: "",
-      musicGenrePreference: [],
+      musicGenrePreference: "", // Changed from [] to ""
       specificEventDate: undefined,
       eventTimeOfDay: "",
       numberOfGuests: "",
@@ -96,7 +96,6 @@ export default function SuggestArtistsForm() {
     try {
       const submissionValues: SuggestArtistsInput = {
         ...values,
-        // Format specificEventDate as ISO 8601 string if it exists
         specificEventDate: values.specificEventDate
           ? values.specificEventDate.toISOString() : undefined,
         eventTimeOfDay: values.eventTimeOfDay === "" ? undefined : values.eventTimeOfDay,
@@ -183,17 +182,19 @@ export default function SuggestArtistsForm() {
                 name="musicGenrePreference"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Music Genre Preference(s)</FormLabel>
-                    <FormControl>
-                      <MultiSelect
-                        options={musicGenres.map(genre => ({ value: genre, label: genre }))}
-                        onValueChange={(value) => field.onChange({ target: { value: value } })}
-                        defaultValue={field.value}
-                        placeholder="Select music genre(s)"
-                        variant="outline"
-                        animation={2}
-                      />
-                    </FormControl>
+                    <FormLabel>Music Genre Preference</FormLabel> {/* Changed label */}
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a music genre" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {musicGenres.map((genre) => (
+                          <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -243,7 +244,6 @@ export default function SuggestArtistsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Desired Time of Day</FormLabel>
-                    {/* Wrap field.onChange to provide value in target.value */}
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -266,7 +266,6 @@ export default function SuggestArtistsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estimated Number of Guests</FormLabel>
-                    {/* Wrap field.onChange to provide value in target.value */}
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -342,3 +341,5 @@ export default function SuggestArtistsForm() {
     </Card>
   );
 }
+
+    
