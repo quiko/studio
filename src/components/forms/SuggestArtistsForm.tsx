@@ -96,7 +96,9 @@ export default function SuggestArtistsForm() {
     try {
       const submissionValues: SuggestArtistsInput = {
         ...values,
-        specificEventDate: values.specificEventDate,
+        // Format specificEventDate as ISO 8601 string if it exists
+        specificEventDate: values.specificEventDate
+          ? values.specificEventDate.toISOString() : undefined,
         eventTimeOfDay: values.eventTimeOfDay === "" ? undefined : values.eventTimeOfDay,
         numberOfGuests: values.numberOfGuests === "" ? undefined : values.numberOfGuests,
         additionalDetails: values.additionalDetails || undefined,
@@ -185,7 +187,7 @@ export default function SuggestArtistsForm() {
                     <FormControl>
                       <MultiSelect
                         options={musicGenres.map(genre => ({ value: genre, label: genre }))}
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => field.onChange({ target: { value: value } })}
                         defaultValue={field.value}
                         placeholder="Select music genre(s)"
                         variant="outline"
@@ -241,6 +243,7 @@ export default function SuggestArtistsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Desired Time of Day</FormLabel>
+                    {/* Wrap field.onChange to provide value in target.value */}
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -263,6 +266,7 @@ export default function SuggestArtistsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estimated Number of Guests</FormLabel>
+                    {/* Wrap field.onChange to provide value in target.value */}
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>

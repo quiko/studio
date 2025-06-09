@@ -1,66 +1,9 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users:
-    // - Authenticated users can read any user profile (e.g., for discovery).
-    // - Users can only create, update, or delete their own profile.
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId && request.resource.data.uid == userId;
-      allow update, delete: if request.auth.uid == userId;
-
-      // Artist-specific sub-collections or data could be further restricted here if needed.
-      // Example: if artistProfileData sub-collection exists
-      // match /artistProfileData/{docId} {
-      //   allow read: if request.auth != null;
-      //   allow write: if request.auth.uid == userId;
-      // }
-    }
-
-    // Events:
-    // - Authenticated users can read events.
-    // - Organizers can create events (assuming event data includes organizerId).
-    // - Only the organizer who created the event can update or delete it.
-    match /events/{eventId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == request.resource.data.organizerId;
-      allow update, delete: if request.auth.uid == resource.data.organizerId;
-    }
-
-    // Contracts:
-    // - Only participants (organizer or artist) of a contract can read it.
-    // - Only participants can update it (e.g., for signing).
-    // - Organizers can create contracts.
-    // - Deletion might be restricted based on status or only allowed by one party.
-    match /contracts/{contractId} {
-      allow read: if request.auth.uid == resource.data.organizerId || request.auth.uid == resource.data.artistId;
-      allow create: if request.auth.uid == request.resource.data.organizerId;
-      allow update: if request.auth.uid == resource.data.organizerId || request.auth.uid == resource.data.artistId;
-      // Deletion could be more complex, e.g., only if status is 'draft' and by organizer
-      // allow delete: if request.auth.uid == resource.data.organizerId && resource.data.status == 'draft';
-    }
-
-    // Conversations:
-    // - Users can only read conversations they are part of.
-    // - Users can create new conversations where they are a participant.
-    // - Updates (like lastMessagePreview, unreadCount) allowed by participants.
-    match /conversations/{conversationId} {
-      allow read, update: if request.auth.uid in resource.data.participants;
-      allow create: if request.auth.uid in request.resource.data.participants;
-      // No direct delete of conversations for now, could be added with specific logic
-
-      // Messages within a conversation:
-      // - Only participants of the conversation can read messages.
-      // - Only participants can send messages (create new messages).
-      match /messages/{messageId} {
-        allow read: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
-        allow create: if request.auth.uid == request.resource.data.senderId &&
-                         get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
-        // No updates or deletes of individual messages for simplicity, but could be added.
-      }
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

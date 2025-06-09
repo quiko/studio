@@ -33,6 +33,8 @@ const statusIconsAndColors: Record<ArtistContractItem['status'], { icon: React.E
 
 export function ArtistContractCard({ contract }: ArtistContractCardProps) {
   const { icon: StatusIcon, color: statusColor, variant: badgeVariant } = statusIconsAndColors[contract.status];
+  const proposedDate = new Date(contract.dateProposed);
+  const formattedProposedDate = !isNaN(proposedDate.getTime()) ? format(proposedDate, "PPP") : "Invalid Date";
 
   return (
     <Card className="flex flex-col h-full hover:shadow-xl transition-shadow duration-300">
@@ -51,7 +53,7 @@ export function ArtistContractCard({ contract }: ArtistContractCardProps) {
       <CardContent className="flex-grow space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">
           <CalendarDays className="mr-2 h-4 w-4" />
-          <span>Proposed: {format(new Date(contract.dateProposed), "PPP")}</span>
+          <span>Proposed: {formattedProposedDate}</span>
         </div>
          <div className="text-sm text-muted-foreground">
           <p className="font-medium text-foreground/80">Scope:</p>
@@ -69,7 +71,7 @@ export function ArtistContractCard({ contract }: ArtistContractCardProps) {
             <DialogHeader>
               <DialogTitle className="font-headline text-2xl">{contract.eventName}</DialogTitle>
               <DialogDescription>
-                Contract with {contract.organizerName} - Proposed on {format(new Date(contract.dateProposed), "PPP")}
+                Contract with {contract.organizerName} - Proposed on {formattedProposedDate}\
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] pr-6">

@@ -43,13 +43,13 @@ interface MultiSelectProps extends React.HTMLAttributes<HTMLElement> {
 export const MultiSelect = React.forwardRef<
   HTMLDivElement,
   MultiSelectProps & {
-    onChange: (selectedValues: string[]) => void;
+    onValueChange?: (selectedValues: string[]) => void;
     value: string[];
   }
->(({ options, selected, onSelect, placeholder, label, name, onChange, value, ...props }, ref) => {
+>(({ options, selected, onSelect, placeholder, label, name, onValueChange, value, ...props }, ref) => {
   const [open, setOpen] = React.useState(false);
   const [selectedValues, setSelectedValues] = React.useState<string[]>(value || []);
-
+ 
   React.useEffect(() => {
     setSelectedValues(value || []);
   }, [value]);
@@ -61,14 +61,14 @@ export const MultiSelect = React.forwardRef<
       : [...selectedValues, currentValue];
 
     setSelectedValues(newSelectedValues);
-    onChange(newSelectedValues);
+    onValueChange?.(newSelectedValues);
     onSelect && onSelect(newSelectedValues);
   };
 
   const handleRemove = (valueToRemove: string) => {
     const newSelectedValues = selectedValues.filter((val) => val !== valueToRemove);
     setSelectedValues(newSelectedValues);
-    onChange(newSelectedValues);
+    onValueChange?.(newSelectedValues);
     onSelect && onSelect(newSelectedValues);
   };
 
