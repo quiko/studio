@@ -39,7 +39,6 @@ const formSchema = z.object({
 
 type CreateContractFormValues = z.infer<typeof formSchema>;
 
-// Define a more specific type for suggestions if ArtistProfileData is too broad or lacks ID
 interface SuggestionArtist extends ArtistProfileData {
   id: string; // Firebase UID
 }
@@ -52,7 +51,7 @@ export default function CreateContractForm() {
   const [artistSearchTerm, setArtistSearchTerm] = useState("");
   const [artistSuggestions, setArtistSuggestions] = useState<SuggestionArtist[]>([]);
   const [showArtistSuggestions, setShowArtistSuggestions] = useState(false);
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null); // To store the ID of the selected artist
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null); 
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
 
@@ -60,7 +59,7 @@ export default function CreateContractForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       organizerName: firebaseUser?.displayName || firebaseUser?.email || "",
-      artistName: "", // This will be the display name in the input
+      artistName: "", 
       eventName: "",
       eventDate: undefined,
       eventLocation: "",
@@ -69,14 +68,12 @@ export default function CreateContractForm() {
     },
   });
 
-  // Effect to set organizer name when firebaseUser is available
   useEffect(() => {
     if (firebaseUser) {
       form.setValue("organizerName", firebaseUser.displayName || firebaseUser?.email || "");
     }
   }, [firebaseUser, form]);
 
-  // Effect for clicking outside suggestions dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
@@ -92,13 +89,12 @@ export default function CreateContractForm() {
   const handleArtistSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setArtistSearchTerm(term);
-    form.setValue("artistName", term); // Keep form value in sync for display and if no selection is made
-    setSelectedArtistId(null); // Reset selected artist ID when search term changes, forces re-selection
+    form.setValue("artistName", term); 
+    setSelectedArtistId(null); 
 
     if (term.length > 1) {
-      // Convert the allArtistProfilesMap (Record<string, ArtistProfileData>) to an array of SuggestionArtist
       const profilesArray: SuggestionArtist[] = Object.entries(allArtistProfilesMap)
-        .map(([id, profile]) => ({ ...profile, id })) // Add id to profile object
+        .map(([id, profile]) => ({ ...profile, id })) 
         .filter(profile => profile.name.toLowerCase().includes(term.toLowerCase()));
       setArtistSuggestions(profilesArray);
       setShowArtistSuggestions(true);
@@ -109,9 +105,9 @@ export default function CreateContractForm() {
   };
 
   const handleArtistSuggestionClick = (artist: SuggestionArtist) => {
-    setArtistSearchTerm(artist.name); // Update search term display to selected artist's name
-    form.setValue("artistName", artist.name); // Set form's artistName field to the selected artist's name
-    setSelectedArtistId(artist.id); // Store selected artist's ID
+    setArtistSearchTerm(artist.name); 
+    form.setValue("artistName", artist.name); 
+    setSelectedArtistId(artist.id); 
     setArtistSuggestions([]);
     setShowArtistSuggestions(false);
   };
@@ -124,12 +120,11 @@ export default function CreateContractForm() {
     }
     setIsLoading(true);
 
-    // Create the contract data object
     const newContractData: Omit<GeneratedContractData, 'id' | 'createdAt' | 'status' | 'signedByOrganizer' | 'signedByArtist'> = {
         organizerId: firebaseUser.uid,
         organizerName: values.organizerName,
-        artistName: values.artistName, // This will be the name from the input (either typed or selected)
-        artistId: selectedArtistId || undefined, // Use the stored ID if an artist was selected from suggestions
+        artistName: values.artistName, 
+        artistId: selectedArtistId || undefined, 
         eventName: values.eventName,
         eventDate: values.eventDate.toISOString(),
         eventLocation: values.eventLocation,
@@ -138,13 +133,13 @@ export default function CreateContractForm() {
     };
 
     try {
-      addOrganizerContract(newContractData); // This function is from useUser context
+      addOrganizerContract(newContractData); 
 
       toast({
         title: "Contract Draft Saved",
         description: `Draft for "${values.eventName}" with ${values.artistName} has been saved.`,
       });
-      form.reset({ // Reset form to default values
+      form.reset({ 
         organizerName: firebaseUser.displayName || firebaseUser.email || "",
         artistName: "",
         eventName: "",
@@ -153,8 +148,8 @@ export default function CreateContractForm() {
         fee: "",
         clauses: "Standard performance terms apply. Payment due upon completion. Cancellation policy: 14 days notice.",
       });
-      setArtistSearchTerm(""); // Reset search term state
-      setSelectedArtistId(null); // Reset selected artist ID state
+      setArtistSearchTerm(""); 
+      setSelectedArtistId(null); 
     } catch (error) {
         console.error("Error creating contract draft:", error);
         toast({ title: "Error", description: "Could not save contract draft.", variant: "destructive"})
@@ -181,11 +176,10 @@ export default function CreateContractForm() {
         />
 
         <div className="grid md:grid-cols-2 gap-6">
-            {/* Artist Name Field with Search */}
             <FormField
               control={form.control}
-              name="artistName" // This field.value is now just for display if an artist is selected
-              render={({ field }) => ( // field here is from react-hook-form for 'artistName'
+              name="artistName" 
+              render={({ field }) => ( 
               <FormItem>
                 <FormLabel>Artist Name</FormLabel>
                 <div className="relative" ref={suggestionsRef}>
@@ -194,12 +188,10 @@ export default function CreateContractForm() {
                         <UserSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           placeholder="Search for registered artists..."
-                          value={artistSearchTerm} // Controlled by local state for search
+                          value={artistSearchTerm} 
                           onChange={handleArtistSearchChange}
                           onFocus={() => artistSearchTerm.length > 1 && setShowArtistSuggestions(true)}
                           className="pl-10"
-                          // {...field} // Do not spread field here directly if value is controlled by artistSearchTerm
-                                      // The form's 'artistName' is updated via form.setValue in handlers
                         />
                     </div>
                   </FormControl>
@@ -225,7 +217,7 @@ export default function CreateContractForm() {
                   )}
                 </div>
                 <FormDescription>Search or type artist name. If not found, the entered name will be used.</FormDescription>
-                <FormMessage /> {/* Shows validation messages for the artistName field */}
+                <FormMessage /> 
               </FormItem>
             )} />
 
@@ -341,3 +333,4 @@ export default function CreateContractForm() {
   );
 }
 
+    
