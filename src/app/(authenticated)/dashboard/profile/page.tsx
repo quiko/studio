@@ -1,3 +1,4 @@
+
 import ArtistProfileForm from "@/components/forms/ArtistProfileForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,3 +18,5 @@ export default function ArtistProfilePage() {
     </div>
   );
 }
+
+    
