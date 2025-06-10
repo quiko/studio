@@ -40,7 +40,14 @@ const ArtistProfileFormSchema = z.object({
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video." }).optional().or(z.literal('')),
   reviews: z.string().optional(),
-  indicativeRates: z.string().min(1, { message: "Indicative rates are required (e.g., $100/hr, Negotiable)." }),
+  indicativeRates: z.preprocess(
+    (val) => {
+      if (typeof val === 'string' && val.trim() === '') return undefined;
+      const num = parseFloat(String(val));
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().nonnegative({ message: "Rate must be 0 or a positive number." }).optional()
+  ),
   profileImage: z.string().url({ message: "Profile image URL is required." }),
   dataAiHint: z.string().max(20, { message: "AI hint should be concise (max 20 chars), e.g., 'musician portrait'."}).optional(),
 });
@@ -64,7 +71,7 @@ export default function ArtistProfileForm() {
       portfolioAudio: "",
       portfolioVideo: "",
       reviews: "",
-      indicativeRates: "",
+      indicativeRates: undefined,
       profileImage: "",
       dataAiHint: "",
     },
@@ -79,7 +86,7 @@ export default function ArtistProfileForm() {
         portfolioAudio: profile.portfolioAudio || "",
         portfolioVideo: profile.portfolioVideo || "",
         reviews: profile.reviews || "",
-        indicativeRates: profile.indicativeRates || "",
+        indicativeRates: profile.indicativeRates, // Will be undefined if not set
         profileImage: profile.profileImage || "https://placehold.co/150x150.png",
         dataAiHint: profile.dataAiHint || "musician portrait",
       });
@@ -176,7 +183,7 @@ export default function ArtistProfileForm() {
       portfolioAudio: values.portfolioAudio || "",
       portfolioVideo: values.portfolioVideo || "",
       reviews: values.reviews || "No reviews yet.",
-      indicativeRates: values.indicativeRates,
+      indicativeRates: values.indicativeRates, // Will be a number or undefined
       profileImage: finalImageURL,
       dataAiHint: values.dataAiHint || "musician portrait",
     };
@@ -313,11 +320,19 @@ export default function ArtistProfileForm() {
           name="indicativeRates"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Indicative Rates</FormLabel>
+              <FormLabel>Indicative Base Rate (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., $200/hour, $800 for 3 sets, Negotiable" {...field} />
+                <Input 
+                  type="number" 
+                  placeholder="e.g., 100" 
+                  {...field} 
+                  value={field.value === undefined ? '' : String(field.value)} // Handle undefined for controlled input
+                  onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                  min="0"
+                  step="10" 
+                />
               </FormControl>
-              <FormDescription>Give organizers an idea of your pricing.</FormDescription>
+              <FormDescription>Enter a base numeric rate. Currency (e.g., USD, EUR) and units (e.g., per hour, per event) can be detailed in your bio or reviews section.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

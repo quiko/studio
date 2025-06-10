@@ -14,7 +14,12 @@ export function ArtistCard({ artist }: ArtistCardProps) {
   const profileImage = artist.artistProfileData?.profileImage || artist.photoURL || 'https://placehold.co/300x200.png';
   const artistName = artist.fullName || artist.email || "Artist";
   const artistGenre = artist.artistProfileData?.genre || artist.genre || "Not specified"; // Prioritize artistProfileData.genre
-  const artistRate = artist.artistProfileData?.indicativeRates || "N/A";
+  
+  const indicativeRatesValue = artist.artistProfileData?.indicativeRates;
+  const artistRateDisplay = typeof indicativeRatesValue === 'number' 
+    ? `$${indicativeRatesValue}` // Basic currency formatting, adjust as needed
+    : "N/A";
+
   const reviewsDisplay = artist.artistProfileData?.reviews || "No reviews yet"; // Using actual reviews if available
 
   return (
@@ -37,7 +42,7 @@ export function ArtistCard({ artist }: ArtistCardProps) {
       <CardContent className="flex-grow space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">
           <DollarSign className="mr-2 h-4 w-4" />
-          <span>Rates: {artistRate}</span>
+          <span>Rates: {artistRateDisplay}</span>
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <Star className="mr-2 h-4 w-4 text-yellow-400" /> 

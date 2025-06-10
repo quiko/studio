@@ -178,7 +178,12 @@ export default function ArtistProfileDisplayPage() {
   const profileImage = artist.photoURL || artist.artistProfileData?.profileImage || 'https://placehold.co/400x400.png';
   const artistName = artist.fullName || artist.email || "Artist";
   const artistPrimaryGenre = artist.artistProfileData?.genre?.split(',')[0].trim() || artist.genre || "Not specified";
-  const artistRates = artist.artistProfileData?.indicativeRates || "N/A";
+  
+  const indicativeRatesValue = artist.artistProfileData?.indicativeRates;
+  const artistRatesDisplay = typeof indicativeRatesValue === 'number' 
+    ? `$${indicativeRatesValue}` // Basic currency formatting, adjust as needed
+    : "N/A";
+    
   const artistReviews = artist.artistProfileData?.reviews || "No reviews yet.";
   const portfolioAudio = artist.artistProfileData?.portfolioAudio;
   const portfolioVideo = artist.artistProfileData?.portfolioVideo;
@@ -232,7 +237,7 @@ export default function ArtistProfileDisplayPage() {
               <CardTitle className="font-headline text-lg flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary"/>Indicative Rates</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{artistRates}</p>
+              <p>{artistRatesDisplay}</p>
             </CardContent>
           </Card>
         </div>
@@ -279,7 +284,7 @@ export default function ArtistProfileDisplayPage() {
             <CardContent>
               <p className="text-muted-foreground">
                 Detailed bio information coming soon. For now, {artistName} is known for their work in the {artistPrimaryGenre} scene.
-                Contact them directly for more information about their experience and performance style.
+                Contact them directly for more information about their experience and performance style. Their indicative rate is {artistRatesDisplay}.
               </p>
             </CardContent>
           </Card>

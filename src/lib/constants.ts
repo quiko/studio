@@ -103,7 +103,7 @@ export type ArtistProfileData = {
   portfolioAudio: string; // URL
   portfolioVideo: string; // URL
   reviews: string; // Text block for now
-  indicativeRates: string;
+  indicativeRates?: number; // Changed to optional number
   profileImage: string; // URL to the image in Firebase Storage or placeholder
   dataAiHint?: string; // Optional hint for AI image services if this image is used as a base
 };
@@ -114,7 +114,7 @@ export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
   portfolioAudio: '',
   portfolioVideo: '',
   reviews: 'No reviews yet.',
-  indicativeRates: '',
+  indicativeRates: undefined, // Changed to undefined
   profileImage: 'https://placehold.co/150x150.png',
   dataAiHint: 'abstract musician',
 };
