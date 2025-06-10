@@ -42,7 +42,7 @@ if (typeof window !== 'undefined') {
     if (process.env.NODE_ENV !== 'production') {
       if (debugTokenFromEnv) {
         console.log("Firebase App Check (Dev): Assigning window.FIREBASE_APPCHECK_DEBUG_TOKEN from NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN. Ensure this token is registered in your Firebase project's App Check settings for the web app.");
-        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugTokenFromEnv;
+        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN ="BC875472-F16B-4071-AFE1-66676AC98D79";
       } else {
         console.warn("Firebase App Check (Dev): NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN is not set in .env. If you intend to use a debug token, ensure it's set in .env OR set window.FIREBASE_APPCHECK_DEBUG_TOKEN directly in your browser's console. The token MUST be registered in the Firebase Console for App Check for your web app.");
       }

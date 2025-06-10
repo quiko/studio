@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/contexts/UserContext";
 import type { ArtistProfileData } from "@/lib/constants";
 import { useState, useEffect, type ChangeEvent } from "react";
@@ -26,9 +27,16 @@ import { Progress } from "@/components/ui/progress";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
+const popularGenres = [
+  "Acoustic", "Ambient", "Blues", "Classical", "Country", "Disco", "Electronic", 
+  "Folk", "Funk", "Hip Hop", "House", "Indie", "Jazz", "Latin", "Lo-fi", 
+  "Metal", "Orchestral", "Pop", "Punk", "R&B", "Reggae", "Rock", "Soul", 
+  "Synthwave", "Techno", "Trance", "World"
+].sort();
+
 const ArtistProfileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  genre: z.string().min(2, { message: "Genre must be at least 2 characters." }),
+  genre: z.string().min(1, { message: "Please select your main genre." }),
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video." }).optional().or(z.literal('')),
   reviews: z.string().optional(),
@@ -229,22 +237,6 @@ export default function ArtistProfileForm() {
             </FormItem>
           )}
         />
-         <FormField
-            control={form.control}
-            name="dataAiHint"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Image AI Hint (Optional)</FormLabel>
-                <FormControl>
-                    <Input placeholder="e.g. musician portrait, band photo" {...field} />
-                </FormControl>
-                <FormDescription>
-                    Short description (1-2 keywords) for image services. Max 20 characters. Examples: 'solo acoustic', 'rock band stage'.
-                </FormDescription>
-                <FormMessage />
-                </FormItem>
-            )}
-        />
 
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -267,9 +259,20 @@ export default function ArtistProfileForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Main Genre</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Indie Pop, Rock, Electronic" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your main genre" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {popularGenres.map((genreItem) => (
+                      <SelectItem key={genreItem} value={genreItem}>
+                        {genreItem}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -353,5 +356,3 @@ export default function ArtistProfileForm() {
     </Form>
   );
 }
-
-    
