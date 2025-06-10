@@ -320,7 +320,7 @@ export default function ArtistProfileForm() {
           name="indicativeRates"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Indicative Base Rate (Optional)</FormLabel>
+              <FormLabel>Indicative Base Rate</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
