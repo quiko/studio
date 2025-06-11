@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,13 +15,24 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { createMusic } from "@/ai/flows/create-music";
 import { useState } from "react";
 import { Loader2, Music2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { MultiSelect } from "@/components/ui/multi-select"; // Added MultiSelect import
+import { MultiSelect } from "@/components/ui/multi-select";
 import { type CreateMusicOutput, type CreateMusicInput } from "@/ai/types";
 
 const instrumentsList = [
@@ -63,43 +73,44 @@ const styleVariationList = [
   "Unplugged", "Experimental"
 ].sort();
 
-
 const formSchema = z.object({
   genre: z.array(z.string()).min(1, { message: "Please select at least one genre." }),
   mood: z.string().min(1, { message: "Please select a mood." }),
-  instruments: z.array(z.string()).refine((value) => value.length > 0, {
-    message: "Please select at least one instrument.",
-  }),
+  instruments: z.array(z.string()).min(1, { message: "Please select at least one instrument." }),
   length: z.string().min(1, { message: "Please select a length." }),
   styleVariation: z.string().optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function CreateMusicForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [composition, setComposition] = useState<CreateMusicOutput | null>(null);
   const { toast } = useToast();
 
- const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      genre: [], // Default to empty array for MultiSelect
+      genre: [],
       mood: "",
       instruments: [],
       length: "medium",
-      styleVariation: "", 
+      styleVariation: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const { handleSubmit, control } = form;
+
+  async function onSubmit(values: FormValues) {
     setIsLoading(true);
     setComposition(null);
     try {
       const submissionValues: CreateMusicInput = {
-        genre: values.genre.join(', '), 
+        genre: values.genre.join(', '),
         mood: values.mood,
         instruments: values.instruments.join(', '),
         length: values.length,
-        styleVariation: (values.styleVariation === "__NONE__" || values.styleVariation === "") ? undefined : values.styleVariation,
+ styleVariation: (values.styleVariation === "__NONE__" || values.styleVariation === "") ? undefined : values.styleVariation,
       };
       const result = await createMusic(submissionValues);
       setComposition(result);
@@ -122,44 +133,33 @@ export default function CreateMusicForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-2xl font-bold">
-          Create Music
-        </CardTitle>
+        <CardTitle className="font-headline text-2xl font-bold">Create Music</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid md:grid-cols-2 gap-6">
               <FormField
-                control={form.control}
+                control={control}
                 name="genre"
-                render={({ field }) => {
-                  const normalizedValue = Array.isArray(field.value)
-                    ? field.value
-                    : field.value === '' || field.value === null || field.value === undefined
-                      ? []
-                      : [String(field.value)];
-                  return (
-                    <FormItem>
-                      <FormLabel>Genres</FormLabel>
-                      <FormControl>
-                        <MultiSelect
-                          options={genreList.map(genre => ({ value: genre, label: genre }))}
-                          placeholder="Select genres"
-                          {...field}
-                          value={normalizedValue}
-                          onChange={(selectedValues: string[]) => {
-                            field.onChange(selectedValues);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Genres</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={genreList.map(genre => ({ value: genre, label: genre }))}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select genres"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+
               <FormField
-                control={form.control}
+                control={control}
                 name="mood"
                 render={({ field }) => (
                   <FormItem>
@@ -183,50 +183,26 @@ export default function CreateMusicForm() {
             </div>
 
             <FormField
-              control={form.control}
+              control={control}
               name="instruments"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Instruments</FormLabel>
-                    <FormDescription>
-                      Select the instruments you'd like in your composition.
-                    </FormDescription>
-                  </div>
+                  <FormLabel>Instruments</FormLabel>
+                  <FormDescription>Select the instruments you want in your composition.</FormDescription>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {instrumentsList.map((instrument) => (
-                      <FormField
-                        key={instrument.id}
-                        control={form.control}
-                        name="instruments"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={instrument.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(instrument.label)}
-                                  onCheckedChange={(checked) => {
-                                    const currentInstruments = Array.isArray(field.value) ? field.value : [];
-                                    return checked
-                                      ? field.onChange([...currentInstruments, instrument.label])
-                                      : field.onChange(
-                                          currentInstruments.filter(
-                                            (value) => value !== instrument.label
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {instrument.label}
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
+                      <div key={instrument.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={field.value.includes(instrument.label)}
+                          onCheckedChange={(checked) => {
+                            const updated = checked
+                              ? [...field.value, instrument.label]
+                              : field.value.filter((val) => val !== instrument.label);
+                            field.onChange(updated);
+                          }}
+                        />
+                        <label className="text-sm">{instrument.label}</label>
+                      </div>
                     ))}
                   </div>
                   <FormMessage />
@@ -235,8 +211,8 @@ export default function CreateMusicForm() {
             />
 
             <div className="grid md:grid-cols-2 gap-6">
-               <FormField
-                control={form.control}
+              <FormField
+                control={control}
                 name="length"
                 render={({ field }) => (
                   <FormItem>
@@ -258,19 +234,19 @@ export default function CreateMusicForm() {
                 )}
               />
               <FormField
-                control={form.control}
+                control={control}
                 name="styleVariation"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stylistic Variation (Optional)</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a stylistic variation (optional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__NONE__">None</SelectItem>
+ <SelectItem value="__NONE__">None</SelectItem>
                         {styleVariationList.map((style) => (
                           <SelectItem key={style} value={style}>{style}</SelectItem>
                         ))}
@@ -281,16 +257,15 @@ export default function CreateMusicForm() {
                 )}
               />
             </div>
+
             <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Composing...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Composing...
                 </>
               ) : (
                 <>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Create Music
+                  <Wand2 className="mr-2 h-4 w-4" /> Create Music
                 </>
               )}
             </Button>
@@ -325,5 +300,3 @@ export default function CreateMusicForm() {
     </Card>
   );
 }
-
-    

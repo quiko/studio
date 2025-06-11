@@ -31,7 +31,7 @@ interface Option {
   label: string;
 }
 
-interface MultiSelectProps extends React.HTMLAttributes<HTMLElement> {
+interface MultiSelectProps {
   options: Option[];
   selected: string[];
   onSelect: (selectedValues: string[]) => void;
@@ -41,12 +41,13 @@ interface MultiSelectProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 export const MultiSelect = React.forwardRef<
-  HTMLDivElement,
+  HTMLButtonElement,
   MultiSelectProps & {
     onValueChange?: (selectedValues: string[]) => void;
     value: string[];
+    onChange?: (value: string[]) => void; // Added onChange prop
   }
->(({ options, selected, onSelect, placeholder, label, name, onValueChange, value, ...props }, ref) => {
+>(({ options, selected, onSelect, placeholder, label, name, onValueChange, value, onChange, ...props }, ref) => {
   const [open, setOpen] = React.useState(false);
   const [selectedValues, setSelectedValues] = React.useState<string[]>(value || []);
  
@@ -62,6 +63,7 @@ export const MultiSelect = React.forwardRef<
 
     setSelectedValues(newSelectedValues);
     onValueChange?.(newSelectedValues);
+    onChange?.(newSelectedValues);
     onSelect && onSelect(newSelectedValues);
   };
 
@@ -69,6 +71,7 @@ export const MultiSelect = React.forwardRef<
     const newSelectedValues = selectedValues.filter((val) => val !== valueToRemove);
     setSelectedValues(newSelectedValues);
     onValueChange?.(newSelectedValues);
+    onChange?.(newSelectedValues);
     onSelect && onSelect(newSelectedValues);
   };
 

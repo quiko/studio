@@ -1,52 +1,43 @@
-
 'use server';
 
-/**
- * @fileOverview AI-powered artist suggestion tool for event organizers.
- * @fileOverview AI-powered artist suggestion tool for event organizers.
- *
- * - suggestArtists - A function that suggests artists based on event details.
- * - SuggestArtistsInput - The input type for the suggestArtists function.
- * - SuggestArtistsOutput - The return type for the suggestArtists function.
- */
-
-import {ai} from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
-import {z} from 'genkit';
+import { z } from 'genkit';
+import { db } from "@/lib/firebase";
 
 const SuggestArtistsInputSchema = z.object({
   eventType: z.string().describe('The type of event (e.g., Corporate Event, Wedding, Festival).'),
-  budgetRange: z.string().describe('The estimated budget range for the artist (e.g., $500-$1000, Negotiable).'),
+  budgetRange: z.string().describe('The estimated budget range for the artist (e.g., "$500 - $1000", "€3000", "Negotiable").'),
   musicGenrePreference: z.string().describe('The preferred music genre for the event.'),
   specificEventDate: z.date().describe('The specific date for the event.').optional(),
-  eventTimeOfDay: z.string().describe('The desired time of day for the event (e.g., Evening, Afternoon, or a specific hourly range like "08:00 - 09:00", "23:00 - 00:00", or "Any Time").').optional(),
-  numberOfGuests: z.string().describe('The estimated number of guests (e.g., 50-100, 250+).').optional(),
-  additionalDetails: z
-    .string()
-    .describe('Any other relevant details about the event, such as exact location if not implied by general area, desired atmosphere not covered by other fields.').optional(),
+  eventStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:mm format").optional(),
+  eventEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:mm format").optional(),
+  numberOfGuests: z.string().optional(),
+  additionalDetails: z.string().optional(),
 });
 export type SuggestArtistsInput = z.infer<typeof SuggestArtistsInputSchema>;
 
 const SuggestArtistsOutputSchema = z.object({
-  artistSuggestions: z
-    .array(z.string())
-    .describe('A list of artist suggestions based on the event details.'),
-  reasoning: z.string().describe('The reasoning behind the artist suggestions.'),
+  artistSuggestions: z.array(z.string()),
+  reasoning: z.string(),
 });
 export type SuggestArtistsOutput = z.infer<typeof SuggestArtistsOutputSchema>;
 
-export async function suggestArtists(input: SuggestArtistsInput): Promise<SuggestArtistsOutput> {
-  return suggestArtistsFlow(input);
-}
-
-import { db } from "@/lib/firebase"; // Assuming you have a firebase.ts file exporting your initialized db
-
 interface Artist {
-  // Define the structure of your artist data in Firestore
   uid: string;
   fullName: string;
-  musicGenres?: string[]; // Assuming you have a field for music genres
-  // Add other relevant artist fields here (e.g., availability, pricing)
+  musicGenres?: string[];
+  availability?: { startDate: Timestamp; endDate: Timestamp }[];
+  priceRange?: string;
+  role: 'artist';
+}
+
+function parseRange(rangeStr: string): [number, number] | null {
+  if (!rangeStr || rangeStr.toLowerCase() === 'negotiable') return null;
+  const numbers = rangeStr.match(/\d+/g)?.map(Number);
+  if (!numbers || numbers.length === 0) return null;
+  if (numbers.length === 1) return [numbers[0], numbers[0]];
+  return [Math.min(...numbers), Math.max(...numbers)];
 }
 
 async function getFilteredArtists(input: SuggestArtistsInput): Promise<Artist[]> {
@@ -54,124 +45,84 @@ async function getFilteredArtists(input: SuggestArtistsInput): Promise<Artist[]>
     const artistsRef = collection(db, "users");
     let q = query(artistsRef, where("role", "==", "artist"));
 
-    // Filter by music genre preference
     if (input.musicGenrePreference) {
       q = query(q, where("musicGenres", "array-contains", input.musicGenrePreference));
     }
 
     const querySnapshot = await getDocs(q);
-    let filteredArtists: Artist[] = [];
+    let artists: Artist[] = [];
     querySnapshot.forEach((doc) => {
-      filteredArtists.push({ uid: doc.id, ...doc.data() as any });
+      artists.push({ uid: doc.id, ...doc.data() } as Artist);
     });
 
-    // Client-side filtering for date, time, and budget
-    if (input.specificEventDate && input.eventTimeOfDay) {
-        filteredArtists = filteredArtists.filter(artist => {
-            if (!artist.availability) return false;
+    const filteredArtists = artists.filter(artist => {
+      if (input.specificEventDate) {
+        if (!artist.availability || artist.availability.length === 0) return false;
 
-            const eventDateTime = new Date(input.specificEventDate); // Assuming specificEventDate is a Date object
+        const eventDate = new Date(input.specificEventDate);
 
-            let eventStartTime: Date | null = null;
-            let eventEndTime: Date | null = null;
+        let isAvailableOnDate = false;
+        if (input.eventStartTime && input.eventEndTime) {
+          const eventStartDateTime = new Date(eventDate);
+          const [startHour, startMinute] = input.eventStartTime.split(':').map(Number);
+          eventStartDateTime.setHours(startHour, startMinute, 0, 0);
 
-            if (input.eventTimeOfDay !== "Any Time") {
-                const [startTimeStr, endTimeStr] = input.eventTimeOfDay.split(" - ");
-                const [startHour, startMinute] = startTimeStr.split(":").map(Number);
-                const [endHour, endMinute] = endTimeStr.split(":").map(Number);
+          const eventEndDateTime = new Date(eventDate);
+          const [endHour, endMinute] = input.eventEndTime.split(':').map(Number);
+          eventEndDateTime.setHours(endHour, endMinute, 0, 0);
 
-                eventStartTime = new Date(eventDateTime);
-                eventStartTime.setHours(startHour, startMinute, 0, 0);
+          if (eventEndDateTime <= eventStartDateTime) {
+            eventEndDateTime.setDate(eventEndDateTime.getDate() + 1);
+          }
 
-                eventEndTime = new Date(eventDateTime);
-                eventEndTime.setHours(endHour, endMinute, 0, 0);
+          isAvailableOnDate = artist.availability.some(slot => {
+            const slotStart = slot.startDate.toDate();
+            const slotEnd = slot.endDate.toDate();
+            return eventStartDateTime < slotEnd && eventEndDateTime > slotStart;
+          });
+        } else {
+          eventDate.setHours(0, 0, 0, 0);
+          isAvailableOnDate = artist.availability.some(slot => {
+            const slotStart = slot.startDate.toDate();
+            const slotEnd = slot.endDate.toDate();
+            return eventDate >= new Date(slotStart.setHours(0,0,0,0)) && eventDate <= new Date(slotEnd.setHours(23,59,59,999));
+          });
+        }
 
-                if (eventEndTime < eventStartTime) {
-                    eventEndTime.setDate(eventEndTime.getDate() + 1);
-                }
-            }
+        if (!isAvailableOnDate) return false;
+      }
 
-            return artist.availability.some(slot => {
-                const slotStartTime = slot.startDate.toDate(); // Convert Timestamp to Date
-                const slotEndTime = slot.endDate.toDate(); // Convert Timestamp to Date
+      if (input.budgetRange) {
+        if (!artist.priceRange) return false;
 
-                if (input.eventTimeOfDay === "Any Time") {
-                    return slotStartTime <= eventDateTime && slotEndTime >= eventDateTime;
-                } else if (eventStartTime && eventEndTime) {
-                    return (eventStartTime < slotEndTime && eventEndTime > slotStartTime);
-                } else if (eventStartTime === null && eventEndTime === null && input.eventTimeOfDay === "Any Time") {
-                    // Handle the case where the user selects "Any Time" for the event.
-                    // In this case, we just need to check if the artist is available on the given date.
-                    const eventDate = new Date(input.specificEventDate);
-                    eventDate.setHours(0, 0, 0, 0);
-                    const slotStartDate = new Date(slotStartTime);
-                    slotStartDate.setHours(0, 0, 0, 0);
-                    const slotEndDate = new Date(slotEndTime);
-                    slotEndDate.setHours(0, 0, 0, 0);
-                    return slotStartDate <= eventDate && slotEndDate >= eventDate;
-                }
-                return false;
-            });
-        });
-    }
+        if (input.budgetRange.toLowerCase() === 'negotiable' || artist.priceRange?.toLowerCase() === 'negotiable') {
+          return true;
+        }
 
-    if (input.budgetRange) {
-        filteredArtists = filteredArtists.filter(artist => {
-            if (!artist.priceRange) return false;
+        const eventBudget = parseRange(input.budgetRange);
+        const artistPrice = parseRange(artist.priceRange);
+        if (!eventBudget || !artistPrice) return false;
 
-            const artistPriceRange = artist.priceRange;
-            const eventBudgetRange = input.budgetRange;
+        const [eventMin, eventMax] = eventBudget;
+        const [artistMin, artistMax] = artistPrice;
 
-            if (artistPriceRange === "Negotiable" || eventBudgetRange === "Negotiable") {
-                return true;
-            }
+        const budgetsOverlap = eventMin <= artistMax && artistMin <= eventMax;
+        if (!budgetsOverlap) return false;
+      }
 
-            // **TODO: Implement logic to check if artist priceRange is compatible with event budgetRange**
-            // This might involve parsing the priceRange string and comparing ranges
-        });
-    }
-
+      return true;
+    });
 
     return filteredArtists;
   } catch (error) {
-    console.error("Error fetching artists במאגר הנתונים:", error); // Corrected console log
+    console.error("Error fetching or filtering artists:", error);
     return [];
   }
 }
 
-const prompt = ai.definePrompt({
-  name: 'suggestArtistsPrompt',
-  input: {schema: SuggestArtistsInputSchema},
-  output: {schema: SuggestArtistsOutputSchema},
-  prompt: `You are an AI assistant helping event organizers find suitable artists for their events.
-
-  Based on the event details provided, suggest a list of artists that would be a good fit.
-  Also, provide a brief reasoning for each suggestion.
-
-  Event Type: {{{eventType}}}
-  Budget Range: {{{budgetRange}}}
-  Music Genre Preference: {{{musicGenrePreference}}}
-
-  {{#if specificEventDate}}
-  Desired Event Date: {{{specificEventDate}}}
-  {{/if}}
-
-  {{#if eventTimeOfDay}}
-  Desired Time of Day: {{{eventTimeOfDay}}}
-  {{/if}}
-
-  {{#if numberOfGuests}}
-  Estimated Number of Guests: {{{numberOfGuests}}}
-  {{/if}}
-
-  {{#if additionalDetails}}
-  Additional Event Details: {{{additionalDetails}}}
-  {{/if}}
-
-  Ensure the output is a JSON object conforming to the SuggestArtistsOutputSchema. The artistSuggestions field should be an array of strings.
-  The reasoning field should clearly explain why each artist was suggested, based on all provided event details.
-`,
-});
+export async function suggestArtists(input: SuggestArtistsInput): Promise<SuggestArtistsOutput> {
+  return suggestArtistsFlow(input);
+}
 
 const suggestArtistsFlow = ai.defineFlow(
   {
@@ -180,50 +131,47 @@ const suggestArtistsFlow = ai.defineFlow(
     outputSchema: SuggestArtistsOutputSchema,
   },
   async input => {
-    // Get filtered artists from the database
     const filteredArtists = await getFilteredArtists(input);
 
-    // Prepare the prompt with the filtered artist list
-    const artistList = filteredArtists.map(artist => `- ${artist.fullName}`).join('\n');
-    const promptWithArtists = `You are an AI assistant helping event organizers find suitable artists for their events.
+    if (filteredArtists.length === 0) {
+      return {
+        artistSuggestions: [],
+        reasoning: "No artists were found matching the specified criteria (genre, date, or budget). Please try broadening your search criteria."
+      };
+    }
 
-    Based on the event details provided and the following list of available artists, suggest a list of artists that would be a good fit.
-    Also, provide a brief reasoning for each suggestion, explaining why they match the event criteria.
+    const artistDetailsForPrompt = filteredArtists.map(artist => 
+      `- Nom: ${artist.fullName}, Genres: ${artist.musicGenres?.join(', ') || 'Non spécifié'}, Tarif: ${artist.priceRange || 'Non spécifié'}`
+    ).join('\n');
 
-    Available Artists:
-${artistList}
+    const prompt = `You are an expert AI assistant helping event organizers find the perfect artist.
+Based on the event details provided and the following list of available and budget-compatible artists, suggest the top 1-3 artists that are the best fit.
+Provide a clear and concise reasoning for your suggestions, explaining why each artist matches the event criteria.
 
-    Event Type: {{{eventType}}}
-    Budget Range: {{{budgetRange}}}
-    Music Genre Preference: {{{musicGenrePreference}}}
+Available Artists with their details:
+${artistDetailsForPrompt}
 
-    {{#if specificEventDate}}
-    Desired Event Date: {{{specificEventDate}}}
-    {{/if}}
+Event Details:
+- Event Type: ${input.eventType}
+- Budget Range: ${input.budgetRange}
+- Music Genre Preference: ${input.musicGenrePreference}
+${input.specificEventDate ? `- Event Date: ${input.specificEventDate.toDateString()}` : ''}
+${input.eventEndTime ? `- Performance End Time: ${input.eventEndTime}` : ''}
+${input.numberOfGuests ? `- Number of Guests: ${input.numberOfGuests}` : ''}
+${input.additionalDetails ? `- Additional Details: ${input.additionalDetails}` : ''}
+${(input.eventStartTime && input.eventEndTime && input.eventEndTime < input.eventStartTime) ? '- Note: Event spans over midnight' : ''}
 
-    {{#if eventTimeOfDay}}
-    Desired Time of Day: {{{eventTimeOfDay}}}
-    {{/if}}
-
-    {{#if numberOfGuests}}
-    Estimated Number of Guests: {{{numberOfGuests}}}
-    {{/if}}
-
-    {{#if additionalDetails}}
-    Additional Event Details: {{{additionalDetails}}}
-    {{/if}}
-
-    Ensure the output is a JSON object conforming to the SuggestArtistsOutputSchema. The artistSuggestions field should be an array of strings containing the names of the suggested artists from the provided list.
-    The reasoning field should clearly explain why each artist was suggested, based on all provided event details and their suitability from the available list.`; // Removed the unnecessary \n at the end of the line
-
+Your final output must be a JSON object conforming to the output schema. The 'artistSuggestions' field must contain an array of the full names of the artists you recommend from the provided list.`;
 
     const { output } = await ai.generate({
-      prompt: promptWithArtists,
-      model: 'gemini-1.5-flash-latest', // Or the model you are using
-      config: {
-        temperature: 0.5, // Adjust temperature as needed
+      model: 'gemini-1.5-flash-latest',
+      prompt: prompt,
+      output: {
+        schema: SuggestArtistsOutputSchema,
       },
-      input: input // Pass the original input to the prompt
+      config: {
+        temperature: 0.3,
+      },
     });
 
     return output!;

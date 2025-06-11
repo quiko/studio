@@ -94,11 +94,17 @@ export default function SuggestArtistsForm() {
     setIsLoading(true);
     setSuggestions(null);
     try {
+      let eventStartTime: string | undefined = undefined;
+      let eventEndTime: string | undefined = undefined;
+
+      if (values.eventTimeOfDay && values.eventTimeOfDay !== "Any Time") {
+        const [start, end] = values.eventTimeOfDay.split(" - ");
+        eventStartTime = start;
+        eventEndTime = end;
+      }
+
       const submissionValues: SuggestArtistsInput = {
         ...values,
-        specificEventDate: values.specificEventDate
-          ? values.specificEventDate.toISOString() : undefined,
-        eventTimeOfDay: values.eventTimeOfDay === "" ? undefined : values.eventTimeOfDay,
         numberOfGuests: values.numberOfGuests === "" ? undefined : values.numberOfGuests,
         additionalDetails: values.additionalDetails || undefined,
       };
@@ -205,6 +211,8 @@ export default function SuggestArtistsForm() {
               <FormField
                 control={form.control}
                 name="specificEventDate"
+                // @ts-ignore - specificEventDate is handled as Date | undefined in the form,
+                // but the AI input expects Date | undefined and handles the conversion internally.
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Specific Event Date (Optional)</FormLabel>

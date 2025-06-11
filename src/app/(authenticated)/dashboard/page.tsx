@@ -9,9 +9,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-  const { userRole, isLoading } = useUser(); // Changed from userType
+  const { userRole, loading } = useUser(); // Changed from userType
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div>
         <PageHeader title="Dashboard" />

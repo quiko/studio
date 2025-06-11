@@ -42,7 +42,7 @@ const formSchema = z.object({
 type SignUpFormValues = z.infer<typeof formSchema>;
 
 export default function SignUpForm() {
-  const { setUserRoleState } = useUser(); 
+  const { setUserType } = useUser(); 
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +59,7 @@ export default function SignUpForm() {
   });
 
   async function onSubmit(values: SignUpFormValues) {
-    if (!values.userType || values.userType === UserType.NONE) { // Double check, though Zod refine should catch it
+    if (!values.userType) { // Double check, though Zod refine should catch it
         toast({
             title: "Sign Up Failed",
             description: "Please select a valid account type.",
@@ -78,8 +78,8 @@ export default function SignUpForm() {
         fullName: values.fullName,
         role: values.userType,
         createdAt: serverTimestamp(), // Use serverTimestamp for consistent server-side timestamp
-      });
-      setUserRoleState(values.userType); 
+      });;
+      setUserType(values.userType); 
 
       toast({
           title: "Account Created!",

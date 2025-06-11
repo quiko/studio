@@ -22,24 +22,24 @@ import {
 } from '@/components/ui/sidebar';
 import { LogoIcon } from '@/components/icons/LogoIcon';
 import { LogOut } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  const { firebaseUser, userRole, isLoading, logout, getArtistProfile, totalUnreadMessagesCount } = useUser();
+  const { firebaseUser, userRole, loading, logout, getArtistProfile, totalUnreadMessagesCount } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !firebaseUser && pathname !== '/login' && pathname !== '/signup') {
+    if (!loading && !firebaseUser && pathname !== '/login' && pathname !== '/signup') {
       router.push('/login');
     }
-  }, [isLoading, firebaseUser, router, pathname]);
+  }, [loading, firebaseUser, router, pathname]);
 
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Skeleton className="h-12 w-12 rounded-full bg-muted" />
         <Skeleton className="h-4 w-[250px] ml-4 bg-muted" />
       </div>
@@ -47,7 +47,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   }
 
   if (!firebaseUser) {
-     return (
+    return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
@@ -55,7 +55,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   }
   
   const handleLogout = async () => {
-    await logout();
+    await logout(); // eslint-disable-line @typescript-eslint/no-floating-promises
     router.push('/login'); 
   };
 
@@ -63,7 +63,8 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   
   const userInitial = firebaseUser?.email?.charAt(0).toUpperCase() || (userRole === UserType.ARTIST ? 'A' : userRole === UserType.ORGANIZER ? 'O' : 'U');
   const userRoleDisplay = userRole.charAt(0).toUpperCase() + userRole.slice(1);
-
+  
+  // ... rest of the component code
   let avatarSrc = `https://placehold.co/40x40.png?text=${userInitial}`;
   let avatarHint = "abstract initial";
 
@@ -110,8 +111,8 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
         <SidebarFooter className="p-4">
            <div className="flex items-center gap-2 mb-2">
             <Avatar>
-              <AvatarImage src={avatarSrc} alt={userRoleDisplay} data-ai-hint={avatarHint}/>
-              <AvatarFallback>{userInitial}</AvatarFallback>
+              <AvatarImage src={avatarSrc} alt={userRoleDisplay} data-ai-hint={avatarHint} />
+              <AvatarFallback>{ userInitial }</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-medium capitalize">{userRoleDisplay}</span>

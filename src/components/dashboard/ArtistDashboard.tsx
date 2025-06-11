@@ -1,32 +1,75 @@
-
 "use client";
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { UserCircle, Music2, FileText, MessageSquare } from 'lucide-react';
+import { Music2, FileText, MessageSquare } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
-import { UserType } from '@/lib/constants';
 import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ArtistDashboard() {
-  const { getArtistProfile, firebaseUser } = useUser();
-  
-  // Profile is now keyed by Firebase UID
-  const profile = firebaseUser ? getArtistProfile(firebaseUser.uid) : { ...DEFAULT_ARTIST_PROFILE, name: "Your Artist Name" };
+  const { loading, firebaseUser, getArtistProfile } = useUser();
+  const artistProfile = firebaseUser ? getArtistProfile(firebaseUser.uid) : undefined;
+
+  // Simulation d’une erreur si le profil est absent après chargement
+  const error = !loading && firebaseUser && !artistProfile;
+
+  if (loading) {
+    return (
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-4">
+            <Skeleton className="h-20 w-20 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 text-center mt-10">
+        An error occurred while loading your artist profile. Please try again later.
+      </div>
+    );
+  }
+
+  const profileName = artistProfile?.name || firebaseUser?.displayName || "Your Artist Name";
+  const profileGenre = artistProfile?.genre || "Your Genre";
+  const profileImage = artistProfile?.profileImage || firebaseUser?.photoURL || "https://placehold.co/80x80.png";
 
   return (
     <div className="grid gap-6">
-       <Card className="hover:shadow-lg transition-shadow">
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader className="flex flex-row items-center gap-4">
-          <Image src={profile.profileImage || "https://placehold.co/80x80.png"} alt={profile.name || "Artist"} width={80} height={80} className="rounded-full w-auto" data-ai-hint="musician portrait" priority />
+          <Image 
+            src={profileImage} 
+            alt={profileName} 
+            width={80} 
+            height={80} 
+            className="rounded-full object-cover"
+            priority 
+          />
           <div>
-            <CardTitle className="font-headline text-2xl">{profile.name || "Your Artist Name"}</CardTitle>
-            <CardDescription>{profile.genre || "Your Genre"}</CardDescription>
+            <CardTitle className="font-headline text-2xl">{profileName}</CardTitle>
+            <CardDescription>{profileGenre}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-           <Link href="/dashboard/profile">
+          <Link href="/dashboard/profile">
             <Button className="w-full" variant="outline">Edit My Profile</Button>
           </Link>
         </CardContent>
@@ -47,6 +90,7 @@ export default function ArtistDashboard() {
             </Link>
           </CardContent>
         </Card>
+
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -61,6 +105,7 @@ export default function ArtistDashboard() {
             </Link>
           </CardContent>
         </Card>
+
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -79,4 +124,3 @@ export default function ArtistDashboard() {
     </div>
   );
 }
-

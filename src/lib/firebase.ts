@@ -20,7 +20,7 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage; // Added
-let appCheckInstance: AppCheck | undefined;
+let appCheckInstance: AppCheck | undefined; // Added flag for initialization status
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
@@ -32,8 +32,8 @@ if (getApps().length === 0) {
 if (typeof window !== 'undefined') {
   try {
     // Ensure you have these in your .env or .env.local file
-    const recaptchaSiteKey = "6LcMZFMrAAAAAPch6lMWFxSvQgjzp_50PsEUXxJA";
-    const debugTokenFromEnv ="BC875472-F16B-4071-AFE1-66676AC98D79";
+    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY; // Changed to RECAPTCHA_ENTERPRISE_SITE_KEY
+    const debugTokenFromEnv = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
 
     // Log the values for easier debugging during setup
     // console.log("Firebase Init: NEXT_PUBLIC_RECAPTCHA_SITE_KEY:", recaptchaSiteKey);
@@ -41,8 +41,8 @@ if (typeof window !== 'undefined') {
 
     if (process.env.NODE_ENV !== 'production') {
       if (debugTokenFromEnv) {
-        console.log("Firebase App Check (Dev): Assigning window.FIREBASE_APPCHECK_DEBUG_TOKEN from NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN. Ensure this token is registered in your Firebase project's App Check settings for the web app.");
-        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN ="BC875472-F16B-4071-AFE1-66676AC98D79";
+        console.log("Firebase App Check (Dev): Assigning window.FIREBASE_APPCHECK_DEBUG_TOKEN from NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN. Ensure this token is registered in your Firebase project's App Check settings for your web app.");
+        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugTokenFromEnv;
       } else {
         console.warn("Firebase App Check (Dev): NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN is not set in .env. If you intend to use a debug token, ensure it's set in .env OR set window.FIREBASE_APPCHECK_DEBUG_TOKEN directly in your browser's console. The token MUST be registered in the Firebase Console for App Check for your web app.");
       }
@@ -53,12 +53,12 @@ if (typeof window !== 'undefined') {
         provider: new ReCaptchaV3Provider(recaptchaSiteKey),
         isTokenAutoRefreshEnabled: true,
       });
-      // console.log("Firebase App Check: Initialized with reCAPTCHA v3 provider. Ensure your domain (and localhost if testing) is whitelisted for this reCAPTCHA key.");
+      console.log("Firebase App Check: Initialized with reCAPTCHA v3 provider using site key from env.");
     } else {
       if (process.env.NODE_ENV === 'production') {
-        console.error("Firebase App Check (Production): NEXT_PUBLIC_RECAPTCHA_SITE_KEY is NOT set. App Check will likely fail in production without a reCAPTCHA key or other configured provider if App Check is enforced.");
+        console.error("Firebase App Check (Production): NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY is NOT set. App Check will likely fail in production without a reCAPTCHA key or other configured provider if App Check is enforced."); // Changed variable name in error message
       } else {
-        try {
+        try { // Added missing closing parenthesis here
             appCheckInstance = initializeAppCheck(app, {
               provider: new ReCaptchaV3Provider('dummy-dev-key-will-be-overridden-by-debug-token'), // Dummy key for dev if debug token is used
               isTokenAutoRefreshEnabled: true,

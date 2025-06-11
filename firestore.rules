@@ -2,8 +2,103 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    //============================================================
+    // Rules for the Users collection
+    //============================================================
+    match /users/{userId} {
+      
+      // Any authenticated user can read profiles (e.g., to display artists/organizers).
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Allow authenticated users to read profiles of users with the 'artist' role
+      allow read: if request.auth != null && resource.data.role == 'artist';
+
+      // A user can only create their own document during sign-up.
+      // We validate the UID, email, and that the role is valid.
+      allow create: if request.auth != null 
+                    && request.auth.uid == userId
+                    && request.resource.data.email == request.auth.token.email
+                    && request.resource.data.role in ['artist', 'organizer'];
+
+      // A user can only update their own document.
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    //============================================================
+    // Rules for the Contracts collection
+    //============================================================
+    match /contracts/{contractId} {
+      
+      // Only an 'organizer' can create a contract.
+      // The user's role is verified via a get() call to their user profile.
+      allow create: if request.auth != null 
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer';
+
+      // Only the organizer and artist involved can read the contract.
+      allow read: if request.auth != null 
+                  && (request.auth.uid == resource.data.organizerId || request.auth.uid == resource.data.artistId);
+      
+      // The artist or organizer can sign the contract (by changing their signature field to `true`).
+      // This prevents "un-signing" or modifying other fields.
+      allow update: if request.auth != null && (
+                      (request.auth.uid == resource.data.organizerId && 
+                       request.resource.data.signedByOrganizer == true && resource.data.signedByOrganizer == false) ||
+                      (request.auth.uid == resource.data.artistId && 
+                       request.resource.data.signedByArtist == true && resource.data.signedByArtist == false)
+                    );
+    }
+
+    //============================================================
+    // Rules for the Conversations collection
+    //============================================================
+    match /conversations/{conversationId} {
+
+      // A user can create a conversation if they are one of the participants.
+      // We also check that there are exactly two participants.
+      allow create: if request.auth != null
+                    && request.resource.data.participants.hasAny([request.auth.uid])
+                    && request.resource.data.participants.size() == 2;
+
+      // Only participants of the conversation can read its data.
+      allow read: if request.auth != null
+                  && resource.data.participants.hasAny([request.auth.uid]);
+
+      // Only participants can update the conversation (e.g., last message preview, unread count).
+      allow update: if request.auth != null
+                    && resource.data.participants.hasAny([request.auth.uid]);
+
+      // For security, deleting conversations from the client is not allowed.
+      allow delete: if false;
+
+
+      //============================================================
+      // Rules for the Messages subcollection (UPDATED)
+      //============================================================
+      match /messages/{messageId} {
+
+        // Participants of the parent conversation can read messages.
+        allow read: if request.auth != null
+                    && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
+
+        // A user can create a message if they are a participant, the senderId is their own,
+        // and they correctly set 'isRead' to false.
+        allow create: if request.auth != null
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.isRead == false
+                      && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
+
+        // A participant can update a message ONLY to mark it as read (isRead: false -> true).
+        // This prevents any other field from being modified.
+        allow update: if request.auth != null
+                      && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid])
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+                      && resource.data.isRead == false
+                      && request.resource.data.isRead == true;
+
+        // Deleting messages is not allowed to preserve chat integrity.
+        allow delete: if false;
+      }
     }
   }
 }

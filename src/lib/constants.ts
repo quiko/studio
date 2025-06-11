@@ -20,6 +20,7 @@ export interface NavItem {
 // User Profile Data
 export type UserProfile = {
   uid: string; // Firebase UID
+  id: string; // Firestore Document ID
   fullName?: string;
   role: UserType;
   email?: string;
@@ -102,9 +103,9 @@ export type ArtistProfileData = {
   genre: string; // Main genre
   portfolioAudio: string; // URL
   portfolioVideo: string; // URL
-  reviews: string; // Text block for now
-  indicativeRates?: number; // Changed to optional number
-  profileImage: string; // URL to the image in Firebase Storage or placeholder
+  bio: string; // Biography or description
+  priceRange: string; // e.g., "$500 - $1000" - Changed from indicativeRates
+  profileImage: string; // URL to the image in Firebase Storage or placeholder, required
   dataAiHint?: string; // Optional hint for AI image services if this image is used as a base
 };
 
@@ -112,9 +113,9 @@ export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
   name: '',
   genre: '',
   portfolioAudio: '',
+  bio: '', // Added bio
   portfolioVideo: '',
-  reviews: 'No reviews yet.',
-  indicativeRates: undefined, // Changed to undefined
+  priceRange: '', // Changed from indicativeRates
   profileImage: 'https://placehold.co/150x150.png',
   dataAiHint: 'abstract musician',
 };
@@ -167,7 +168,7 @@ export interface Conversation {
   lastMessagePreview: string;
   lastMessageTimestamp: string;
   unreadCount: number;
-  messages: Message[];
+  messages?: Message[];
   // Firebase specific fields, if directly mapping from Firestore
   participants?: string[]; // Array of Firebase UIDs
   // Unread count might be an object if stored per participant:
@@ -185,7 +186,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessagePreview: "Perfect, see you then!",
     lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
     unreadCount: 0,
-    messages: [
+    messages: [ // Added messages array
       { id: 'msg-1-1', senderId: 'organizer-alpha', text: "Hey! Just wanted to confirm the soundcheck time for Friday's gig. Is 3 PM still good for you?", timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
       { id: 'msg-1-2', senderId: CURRENT_USER_MOCK_ID, text: "Hi Alex, yes 3 PM works great for me. Looking forward to it!", timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
       { id: 'msg-1-3', senderId: 'organizer-alpha', text: "Perfect, see you then!", timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
@@ -200,7 +201,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessagePreview: "Thanks for the offer, I'll review the contract details tonight.",
     lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     unreadCount: 1,
-    messages: [
+    messages: [ // Added messages array
       { id: 'msg-2-1', senderId: CURRENT_USER_MOCK_ID, text: "Hi Serena, loved your latest track! We'd be thrilled to have you perform at our upcoming 'Indie Fest'. I've sent over a draft contract.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
       { id: 'msg-2-2', senderId: 'artist-beta', text: "Hey there! That's amazing to hear, thank you! Sounds like a great event.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5).toISOString() },
       { id: 'msg-2-3', senderId: 'artist-beta', text: "Thanks for the offer, I'll review the contract details tonight.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
@@ -215,7 +216,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessagePreview: "Can you send over your tech rider when you get a chance?",
     lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
     unreadCount: 0,
-    messages: [
+    messages: [ // Added messages array
       { id: 'msg-3-1', senderId: 'organizer-gamma', text: "Following up on our discussion for Groove Fest main stage. We're very excited!", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() },
       { id: 'msg-3-2', senderId: 'organizer-gamma', text: "Can you send over your tech rider when you get a chance?", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
     ],
@@ -229,7 +230,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessagePreview: "My availability for next month is open. Let me know what dates you're considering.",
     lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
     unreadCount: 3,
-    messages: [
+    messages: [ // Added messages array
       { id: 'msg-4-1', senderId: 'artist-delta', text: "My availability for next month is open. Let me know what dates you're considering.", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
     ],
   },
@@ -238,8 +239,9 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
 
 export const userProfileSchema = z.object({
   uid: z.string(),
+  id: z.string(), // Added id to schema
   fullName: z.string().optional(),
-  role: z.nativeEnum(UserType), // Use nativeEnum for UserType
+  role: z.nativeEnum(UserType).optional().default(UserType.NONE), // Use nativeEnum for UserType, make optional with default
   genre: z.string().optional(),
   email: z.string().email().optional(),
   createdAt: z.union([z.string(), z.instanceof(Timestamp)]).optional(), // Allow string or Timestamp

@@ -32,7 +32,7 @@ const formSchema = z.object({
 type LoginFormValues = z.infer<typeof formSchema>;
 
 export default function LoginForm() {
-  const { setUserRoleState } = useUser(); 
+  const { setUserType } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +56,7 @@ export default function LoginForm() {
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        setUserRoleState(userData.role as UserType || UserType.NONE); 
+        setUserType(userData.role as UserType || UserType.NONE);
         toast({
             title: "Login Successful!",
             description: `Welcome back!`,

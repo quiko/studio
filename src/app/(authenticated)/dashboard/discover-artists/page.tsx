@@ -4,8 +4,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ArtistCard } from '@/components/cards/ArtistCard';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Search, Loader2 } from 'lucide-react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserType, type UserProfile } from '@/lib/constants';
 import { userProfileConverter } from '@/lib/firestoreConverter';
@@ -19,45 +19,67 @@ export default function DiscoverArtistsPage() {
   const [allArtists, setAllArtists] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
+  // AMÉLIORATION : Remplacement de onSnapshot par getDocs pour une meilleure performance et la correction de la fuite mémoire.
   useEffect(() => {
-    if (!userLoading) {
-      if (userRole !== UserType.ORGANIZER) {
-        setIsRedirecting(true);
-        router.push('/dashboard'); // Redirect if not an organizer
-      } else {
-        setIsRedirecting(false); // Ensure isRedirecting is false for organizers
-        const q = query(collection(db, 'users'), where('role', '==', 'artist')); // Filter for lowercase 'artist'
-
-        const unsubscribe = onSnapshot(q.withConverter(userProfileConverter), (querySnapshot) => {
-          const artistsData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(), // Data is already validated and converted by the converter
-          }));
-          setAllArtists(artistsData);
-          setLoading(false);
-        }, (error) => {
-          console.error("Error fetching artists:", error);
-          setLoading(false); // Consider handling this error in the UI
-        });
-
-      }
+    // Attend la fin du chargement des informations de l'utilisateur
+    if (userLoading) {
+      return;
     }
 
-  }, [userRole, userLoading, router]); // Dependencies for useEffect
+    // 1. Vérification du rôle et redirection si nécessaire
+    if (userRole !== UserType.ORGANIZER) {
+      router.push('/dashboard');
+      return;
+    }
 
-  const filteredArtists = allArtists.filter(artist =>
-    (artist.fullName && artist.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (artist.genre && artist.genre.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+    // 2. Fonction asynchrone pour charger les données une seule fois
+    const fetchArtists = async () => {
+      try {
+        const artistsQuery = query(
+          collection(db, 'users'), 
+          where('role', '==', 'artist')
+        ).withConverter(userProfileConverter);
 
-  if (isRedirecting) {
-    return <p>Redirecting...</p>;
+        const querySnapshot = await getDocs(artistsQuery);
+        const artistsData = querySnapshot.docs.map(doc => ({
+          ...doc.data(),
+        }));
+        
+        setAllArtists(artistsData);
+      } catch (error) {
+        console.error("Error fetching artists:", error);
+        // Optionnel: afficher une erreur dans l'UI
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArtists();
+  }, [userRole, userLoading, router]);
+
+  // AMÉLIORATION : Filtrage cohérent avec la structure de données recommandée
+  const filteredArtists = allArtists.filter(artist => {
+    const term = searchTerm.toLowerCase();
+    const nameMatch = artist.fullName?.toLowerCase().includes(term);
+    // On cherche le genre dans l'objet imbriqué `artistProfileData`
+    const genreMatch = artist.artistProfileData?.genre?.toLowerCase().includes(term);
+    return nameMatch || genreMatch;
+  });
+
+  // SIMPLIFIÉ : Affichage unique pendant le chargement initial ou la redirection
+  if (userLoading || loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Loading artists...</p>
+      </div>
+    );
   }
-
+  
+  // La redirection est gérée dans le useEffect, on peut aussi empêcher le rendu si le rôle n'est pas bon
   if (userRole !== UserType.ORGANIZER) {
-    return null; // Or a message indicating redirect
+    return null; // ou un message "Accès non autorisé"
   }
 
   return (
@@ -76,15 +98,13 @@ export default function DiscoverArtistsPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
- {/* Conditional rendering based on loading and filteredArtists */}
-      {loading ? (
- <p className="text-center py-8">Loading artists...</p>
- ) : filteredArtists.length === 0 ? (
- <p className="text-muted-foreground text-center py-8">No artists found matching your criteria. Try a different search.</p>
- ) : (
+
+      {filteredArtists.length === 0 ? (
+        <p className="text-muted-foreground text-center py-8">No artists found matching your criteria.</p>
+      ) : (
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredArtists.map((artist) => (
- <ArtistCard key={artist.id} artist={artist} />
+            <ArtistCard key={artist.id} artist={artist} />
           ))}
         </div>
       )}

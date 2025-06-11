@@ -4,4 +4,25 @@
 runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
-  maxInstances: 1
+
+  minInstances: 2
+  maxInstances: 100
+  concurrency: 100
+  cpu: 2
+  memoryMiB: 1024
+
+# Environment variables and secrets
+env:
+  - variable: STORAGE_BUCKET
+    value: "maestroai-byliq.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: API_KEY
+    secret: myApiKeySecret
+    secret: API_KEY
+
+  - variable: PINNED_API_KEY
+    secret: myApiKeySecret
+    secret: API_KEY

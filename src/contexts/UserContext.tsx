@@ -11,11 +11,11 @@ import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFIL
 interface UserContextType {
   firebaseUser: FirebaseUser | null;
   userRole: UserType;
-  isLoading: boolean;
-  setUserRoleState: (role: UserType) => void; // For direct role setting after signup/login
+  loading: boolean;
+  setUserType: (role: UserType) => void; // For direct role setting after signup/login
   logout: () => Promise<void>;
-  events: EventItem[];
   addEvent: (event: Omit<EventItem, 'id'>) => void;
+  events: EventItem[];
   updateEvent: (event: EventItem) => void;
   deleteEvent: (eventId: string) => void;
   artistProfiles: Record<string, ArtistProfileData>; // Keyed by Firebase UID
@@ -38,7 +38,7 @@ const LOCAL_STORAGE_KEY_ORGANIZER_CONTRACTS = 'maestroai_organizer_contracts';
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<UserType>(UserType.NONE);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsLoading] = useState(true);
   const [totalUnreadMessagesCount, setTotalUnreadMessagesCount] = useState(0);
 
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -121,7 +121,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [firebaseUser?.uid]);
 
 
-  const setUserRoleState = (role: UserType) => {
+  const setUserType = (role: UserType) => {
     setUserRole(role);
   };
   
@@ -223,15 +223,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       return c;
     });
     persistOrganizerContracts(updatedContracts);
-  };
+};
 
 
   return (
     <UserContext.Provider value={{ 
       firebaseUser, 
       userRole, 
-      isLoading, 
-      setUserRoleState,
+      loading,
+      setUserType,
       logout,
       events, addEvent, updateEvent, deleteEvent, 
       artistProfiles, getArtistProfile, updateArtistProfile,

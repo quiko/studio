@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /artistProfileImages/{userId}/{fileName} {
+      // Allow anyone to read files in artistProfileImages
+      allow read: if request.auth != null;
+
+      // Allow the authenticated user to write/update files in their own folder
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Optional: Add a rule for other paths if you have other files in storage
+    // For example, deny access to all other paths by default
+    match /{allPaths=**} {
+       allow read, write: if false;
+    }
+  }
+}

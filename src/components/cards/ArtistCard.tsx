@@ -15,12 +15,10 @@ export function ArtistCard({ artist }: ArtistCardProps) {
   const artistName = artist.fullName || artist.email || "Artist";
   const artistGenre = artist.artistProfileData?.genre || artist.genre || "Not specified"; // Prioritize artistProfileData.genre
   
-  const indicativeRatesValue = artist.artistProfileData?.indicativeRates;
-  const artistRateDisplay = typeof indicativeRatesValue === 'number' 
-    ? `$${indicativeRatesValue}` // Basic currency formatting, adjust as needed
-    : "N/A";
-
-  const reviewsDisplay = artist.artistProfileData?.reviews || "No reviews yet"; // Using actual reviews if available
+  const artistPriceRange = artist.artistProfileData?.priceRange;
+  const artistRateDisplay = artistPriceRange 
+    ? artistPriceRange
+    : "Not specified"; // Using actual reviews if available
 
   return (
     <Card className="flex flex-col h-full overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -43,10 +41,6 @@ export function ArtistCard({ artist }: ArtistCardProps) {
         <div className="flex items-center text-sm text-muted-foreground">
           <DollarSign className="mr-2 h-4 w-4" />
           <span>Rates: {artistRateDisplay}</span>
-        </div>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Star className="mr-2 h-4 w-4 text-yellow-400" /> 
-          <span className="line-clamp-1">{reviewsDisplay.startsWith("No reviews") ? reviewsDisplay : "View Reviews on Profile"}</span>
         </div>
       </CardContent>
       <CardFooter>

@@ -30,7 +30,7 @@ export function UserTypeSelector() {
         className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
       >
         <Building className="mr-2 h-5 w-5" />
-        I'm an Event Organizer
+        Event Organizer
       </Button>
       <Button
         size="lg"
@@ -38,7 +38,7 @@ export function UserTypeSelector() {
         className="bg-accent hover:bg-accent/90 text-accent-foreground flex-1"
       >
         <User className="mr-2 h-5 w-5" />
-        I'm an Artist
+        Artist
       </Button>
     </div>
   );

@@ -39,15 +39,8 @@ const ArtistProfileFormSchema = z.object({
   genre: z.string().min(1, { message: "Please select your main genre." }),
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video." }).optional().or(z.literal('')),
-  reviews: z.string().optional(),
-  indicativeRates: z.preprocess(
-    (val) => {
-      if (typeof val === 'string' && val.trim() === '') return undefined;
-      const num = parseFloat(String(val));
-      return isNaN(num) ? undefined : num;
-    },
-    z.number().nonnegative({ message: "Rate must be 0 or a positive number." }).optional()
-  ),
+ bio: z.string().optional(),
+  priceRange: z.string().optional(),
   profileImage: z.string().url({ message: "Profile image URL is required." }),
   dataAiHint: z.string().max(20, { message: "AI hint should be concise (max 20 chars), e.g., 'musician portrait'."}).optional(),
 });
@@ -70,8 +63,8 @@ export default function ArtistProfileForm() {
       genre: "",
       portfolioAudio: "",
       portfolioVideo: "",
-      reviews: "",
-      indicativeRates: undefined,
+ bio: "",
+ priceRange: undefined,
       profileImage: "",
       dataAiHint: "",
     },
@@ -85,8 +78,8 @@ export default function ArtistProfileForm() {
         genre: profile.genre || "",
         portfolioAudio: profile.portfolioAudio || "",
         portfolioVideo: profile.portfolioVideo || "",
-        reviews: profile.reviews || "",
-        indicativeRates: profile.indicativeRates, // Will be undefined if not set
+ bio: profile.bio || "",
+ priceRange: profile.priceRange || undefined, // Assuming priceRange is string
         profileImage: profile.profileImage || "https://placehold.co/150x150.png",
         dataAiHint: profile.dataAiHint || "musician portrait",
       });
@@ -182,8 +175,8 @@ export default function ArtistProfileForm() {
       genre: values.genre,
       portfolioAudio: values.portfolioAudio || "",
       portfolioVideo: values.portfolioVideo || "",
-      reviews: values.reviews || "No reviews yet.",
-      indicativeRates: values.indicativeRates, // Will be a number or undefined
+ bio: values.bio || "",
+ priceRange: values.priceRange || '', // Ensure priceRange is always a string
       profileImage: finalImageURL,
       dataAiHint: values.dataAiHint || "musician portrait",
     };
@@ -317,19 +310,16 @@ export default function ArtistProfileForm() {
         
         <FormField
           control={form.control}
-          name="indicativeRates"
+          name="priceRange"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Indicative Base Rate</FormLabel>
+              <FormLabel>Price Range</FormLabel>
               <FormControl>
                 <Input 
-                  type="number" 
-                  placeholder="e.g., 100" 
+                  placeholder="e.g., $100 - $500 per event" 
                   {...field} 
-                  value={field.value === undefined ? '' : String(field.value)} // Handle undefined for controlled input
-                  onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                  min="0"
-                  step="10" 
+                  value={field.value || ''} // Ensure controlled component doesn't get undefined
+                  onChange={field.onChange}
                 />
               </FormControl>
               <FormDescription>Enter a base numeric rate. Currency (e.g., USD, EUR) and units (e.g., per hour, per event) can be detailed in your bio or reviews section.</FormDescription>
@@ -340,19 +330,19 @@ export default function ArtistProfileForm() {
 
         <FormField
           control={form.control}
-          name="reviews"
+          name="bio"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Reviews/Testimonials (Optional)</FormLabel>
+              <FormLabel>Bio (Optional)</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Paste a few short reviews or testimonials here."
+                  placeholder="Tell us about yourself as an artist, your style, influences, etc."
                   {...field}
                   rows={5}
                 />
               </FormControl>
               <FormDescription>
-                Showcase positive feedback from past clients or collaborators.
+                Share a brief biography about your music and career.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -360,7 +350,7 @@ export default function ArtistProfileForm() {
         />
         
         <Button type="submit" disabled={isLoading || isUploading}>
-          {isLoading || isUploading ? (
+          {isUploading || isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Save className="mr-2 h-4 w-4" />
