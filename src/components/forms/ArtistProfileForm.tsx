@@ -56,9 +56,10 @@ type ArtistProfileFormValues = z.infer<typeof ArtistProfileFormSchema>;
 interface ArtistProfileFormProps {
   formId: string;
   onSetIsLoading: (isLoading: boolean) => void;
+  currentAvailabilityDates?: Date[]; // New prop to receive selected dates from parent
 }
 
-export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProfileFormProps) {
+export default function ArtistProfileForm({ formId, onSetIsLoading, currentAvailabilityDates }: ArtistProfileFormProps) {
   const { firebaseUser, getArtistProfile, updateArtistProfile, userRole } = useUser();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -84,8 +85,8 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
   useEffect(() => {
     if (firebaseUser && userRole === "artist") {
       const profile = getArtistProfile(firebaseUser.uid);
-      // Ensure availability dates are Date objects
-      const availabilityForForm = profile.availability?.map(slot => ({
+      // Availability from profile (already Date objects from context)
+      const profileAvailability = profile.availability?.map(slot => ({
         startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
         endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
       })) || [];
@@ -99,11 +100,27 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
         priceRange: profile.priceRange || undefined,
         profileImage: profile.profileImage || "https://placehold.co/150x150.png",
         dataAiHint: profile.dataAiHint || "musician portrait",
-        availability: availabilityForForm,
+        availability: profileAvailability, // Use availability from profile data
       });
       setCurrentProfileImage(profile.profileImage || "https://placehold.co/150x150.png");
     }
   }, [firebaseUser, getArtistProfile, form, userRole]);
+
+  // Effect to update form's availability when currentAvailabilityDates (from parent calendar) changes
+  useEffect(() => {
+    if (currentAvailabilityDates) {
+      const newAvailabilitySlots = currentAvailabilityDates.map(date => {
+        // For single day selection, startDate and endDate are the same day
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0); // Start of the day
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999); // End of the day
+        return { startDate, endDate };
+      });
+      form.setValue("availability", newAvailabilitySlots, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [currentAvailabilityDates, form]);
+
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -147,7 +164,7 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
       toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
       return;
     }
-    onSetIsLoading(true); // Inform parent that loading has started
+    onSetIsLoading(true); 
 
     let finalImageURL = values.profileImage;
 
@@ -180,15 +197,16 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
         });
       } catch (error) {
         setIsUploading(false);
-        onSetIsLoading(false); // Inform parent that loading has ended
+        onSetIsLoading(false); 
         return; 
       }
       setIsUploading(false);
       setNewImageFile(null); 
     }
 
-
-    const profileData: ArtistProfileData = {
+    // The `values.availability` should now be correctly populated from the parent calendar's selected dates
+    // It already contains JavaScript Date objects due to the useEffect hook.
+    const profileDataToSave: ArtistProfileData = {
       name: values.name,
       genre: values.genre,
       portfolioAudio: values.portfolioAudio || "",
@@ -197,14 +215,12 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
       priceRange: values.priceRange || '',
       profileImage: finalImageURL,
       dataAiHint: values.dataAiHint || "musician portrait",
-      availability: values.availability?.map(slot => ({ // Ensure dates are JS Dates
-        startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
-        endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
-      })) || [],
+      availability: values.availability || [], // Ensure it's an empty array if undefined
     };
 
     try {
-      updateArtistProfile(firebaseUser.uid, profileData);
+      // UserContext's updateArtistProfile expects Date objects for availability, which is what we have.
+      updateArtistProfile(firebaseUser.uid, profileDataToSave);
       toast({
         title: "Profile Updated",
         description: "Your artist profile has been successfully updated.",
@@ -213,7 +229,7 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
       console.error("Failed to update profile:", error);
       toast({ title: "Error", description: "Failed to update profile. Please try again.", variant: "destructive" });
     } finally {
-      onSetIsLoading(false); // Inform parent that loading has ended
+      onSetIsLoading(false); 
     }
   }
 
@@ -343,7 +359,7 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
                   onChange={field.onChange}
                 />
               </FormControl>
-              <FormDescription>Enter a base numeric rate. Currency (e.g., USD, EUR) and units (e.g., per hour, per event) can be detailed in your bio or reviews section.</FormDescription>
+              <FormDescription>Enter your typical price range for performances or services.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -369,7 +385,7 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
             </FormItem>
           )}
         />
-        {/* Submit button is now rendered by the parent page */}
+        {/* The submit button is now rendered by the parent page src/app/(authenticated)/dashboard/profile/page.tsx */}
       </form>
     </Form>
   );
