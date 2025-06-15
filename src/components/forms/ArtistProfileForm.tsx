@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/contexts/UserContext";
-import type { ArtistProfileData } from "@/lib/constants";
+import type { ArtistProfileData, ArtistAvailabilitySlot } from "@/lib/constants";
 import { useState, useEffect, type ChangeEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, UploadCloud, FileAudio, Trash2 } from "lucide-react";
@@ -43,6 +43,12 @@ const ArtistProfileFormSchema = z.object({
   priceRange: z.string().optional(),
   profileImage: z.string().url({ message: "Profile image URL is required." }),
   dataAiHint: z.string().max(20, { message: "AI hint should be concise (max 20 chars), e.g., 'musician portrait'."}).optional(),
+  availability: z.array(
+    z.object({
+      startDate: z.date(),
+      endDate: z.date(),
+    })
+  ).optional(),
 });
 
 type ArtistProfileFormValues = z.infer<typeof ArtistProfileFormSchema>;
@@ -71,12 +77,19 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
       priceRange: undefined,
       profileImage: "",
       dataAiHint: "",
+      availability: [],
     },
   });
 
   useEffect(() => {
     if (firebaseUser && userRole === "artist") {
       const profile = getArtistProfile(firebaseUser.uid);
+      // Ensure availability dates are Date objects
+      const availabilityForForm = profile.availability?.map(slot => ({
+        startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
+        endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
+      })) || [];
+
       form.reset({
         name: profile.name || "",
         genre: profile.genre || "",
@@ -86,6 +99,7 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
         priceRange: profile.priceRange || undefined,
         profileImage: profile.profileImage || "https://placehold.co/150x150.png",
         dataAiHint: profile.dataAiHint || "musician portrait",
+        availability: availabilityForForm,
       });
       setCurrentProfileImage(profile.profileImage || "https://placehold.co/150x150.png");
     }
@@ -183,6 +197,10 @@ export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProf
       priceRange: values.priceRange || '',
       profileImage: finalImageURL,
       dataAiHint: values.dataAiHint || "musician portrait",
+      availability: values.availability?.map(slot => ({ // Ensure dates are JS Dates
+        startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
+        endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
+      })) || [],
     };
 
     try {

@@ -104,6 +104,11 @@ export type EventItem = {
   description: string;
 };
 
+export type ArtistAvailabilitySlot = {
+  startDate: Date;
+  endDate: Date;
+};
+
 export type ArtistProfileData = {
   name: string; // Artist/Band Name
   genre: string; // Main genre
@@ -114,6 +119,7 @@ export type ArtistProfileData = {
   profileImage: string; // URL to the image in Firebase Storage or placeholder, required
   dataAiHint?: string; // Optional hint for AI image services if this image is used as a base
   indicativeRates?: number; // Base numeric rate, optional
+  availability?: ArtistAvailabilitySlot[]; // Array of availability slots
 };
 
 export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
@@ -126,6 +132,7 @@ export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
   profileImage: 'https://placehold.co/150x150.png',
   dataAiHint: 'abstract musician',
   indicativeRates: undefined,
+  availability: [],
 };
 
 

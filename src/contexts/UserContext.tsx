@@ -4,9 +4,9 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore'; // Added collection, query, where, onSnapshot
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore'; // Added Timestamp
 import { auth, db } from '@/lib/firebase';
-import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE, type GeneratedContractData, type GeneratedContractStatus } from '@/lib/constants';
+import { UserType, type EventItem, type ArtistProfileData, DEFAULT_ARTIST_PROFILE, type GeneratedContractData, type GeneratedContractStatus, type ArtistAvailabilitySlot } from '@/lib/constants';
 
 interface UserContextType {
   firebaseUser: FirebaseUser | null;
@@ -51,8 +51,22 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const storedEvents = localStorage.getItem(LOCAL_STORAGE_KEY_EVENTS);
       if (storedEvents) setEvents(JSON.parse(storedEvents));
       
-      const storedArtistProfiles = localStorage.getItem(LOCAL_STORAGE_KEY_ARTIST_PROFILES);
-      if (storedArtistProfiles) setArtistProfiles(JSON.parse(storedArtistProfiles));
+      const storedArtistProfilesRaw = localStorage.getItem(LOCAL_STORAGE_KEY_ARTIST_PROFILES);
+      if (storedArtistProfilesRaw) {
+        const parsedProfiles: Record<string, any> = JSON.parse(storedArtistProfilesRaw);
+        const profilesWithDates: Record<string, ArtistProfileData> = {};
+        for (const uid in parsedProfiles) {
+          const profile = parsedProfiles[uid];
+          profilesWithDates[uid] = {
+            ...profile,
+            availability: profile.availability?.map((slot: any) => ({
+              startDate: new Date(slot.startDate),
+              endDate: new Date(slot.endDate),
+            })) || [],
+          };
+        }
+        setArtistProfiles(profilesWithDates);
+      }
 
       const storedOrganizerContracts = localStorage.getItem(LOCAL_STORAGE_KEY_ORGANIZER_CONTRACTS);
       if (storedOrganizerContracts) setOrganizerContracts(JSON.parse(storedOrganizerContracts));
@@ -72,9 +86,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           setUserRole(userData.role as UserType || UserType.NONE);
           // Load user-specific artist profile if user is an artist
           if (userData.role === UserType.ARTIST) {
-             const profile = localStorage.getItem(`${LOCAL_STORAGE_KEY_ARTIST_PROFILES}_${user.uid}`);
-             if (profile) {
-                setArtistProfiles(prev => ({...prev, [user.uid]: JSON.parse(profile)}));
+             const profileRaw = localStorage.getItem(`${LOCAL_STORAGE_KEY_ARTIST_PROFILES}_${user.uid}`);
+             if (profileRaw) {
+                const profile = JSON.parse(profileRaw);
+                const profileWithDates: ArtistProfileData = {
+                  ...profile,
+                  availability: profile.availability?.map((slot: any) => ({
+                    startDate: new Date(slot.startDate),
+                    endDate: new Date(slot.endDate),
+                  })) || [],
+                };
+                setArtistProfiles(prev => ({...prev, [user.uid]: profileWithDates}));
              }
           }
         } else {
@@ -162,6 +184,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setArtistProfiles(updatedProfiles);
     if (typeof window !== 'undefined') {
       // Store all profiles under a general key
+      // Dates will be stringified to ISO format by JSON.stringify
       localStorage.setItem(LOCAL_STORAGE_KEY_ARTIST_PROFILES, JSON.stringify(updatedProfiles));
       // Additionally, if a specific user is logged in and is an artist, store their profile separately
       if (firebaseUser && userRole === UserType.ARTIST && updatedProfiles[firebaseUser.uid]) {
@@ -171,11 +194,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getArtistProfile = (userId: string): ArtistProfileData => {
-    return artistProfiles[userId] || { ...DEFAULT_ARTIST_PROFILE, name: firebaseUser?.displayName || "Artist Profile" };
+    const profileFromState = artistProfiles[userId];
+    if (profileFromState) {
+      // Ensure dates are Date objects if they were stringified
+      return {
+        ...profileFromState,
+        availability: profileFromState.availability?.map(slot => ({
+          startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
+          endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
+        })) || [],
+      };
+    }
+    return { 
+        ...DEFAULT_ARTIST_PROFILE, 
+        name: firebaseUser?.displayName || "Artist Profile",
+        availability: [], // Ensure default has empty availability array
+    };
   };
 
   const updateArtistProfile = (userId: string, profile: ArtistProfileData) => {
-    persistArtistProfiles({ ...artistProfiles, [userId]: profile });
+    // Ensure incoming availability dates are Date objects
+    const profileWithDates: ArtistProfileData = {
+      ...profile,
+      availability: profile.availability?.map(slot => ({
+        startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
+        endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
+      })) || [],
+    };
+    persistArtistProfiles({ ...artistProfiles, [userId]: profileWithDates });
   };
 
   const persistOrganizerContracts = (updatedContracts: GeneratedContractData[]) => {
