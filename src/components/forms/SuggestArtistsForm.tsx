@@ -26,7 +26,6 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-// Removed MultiSelect import as it's no longer used
 
 const eventTypes = [
   "Corporate Event", "Private Party", "Wedding", "Festival", "Concert", 
@@ -62,11 +61,12 @@ const numberOfGuestsOptions = [
   "Under 25", "25 - 50", "51 - 100", "101 - 250", "251 - 500", "500+"
 ];
 
+// Form schema uses z.date() for the Calendar component
 const formSchema = z.object({
   eventType: z.string().min(1, { message: "Please select an event type." }),
   budgetRange: z.string().min(1, { message: "Please select a budget range." }),
-  musicGenrePreference: z.string().min(1, { message: "Please select a music genre." }), // Changed from array to string
-  specificEventDate: z.date().optional(),
+  musicGenrePreference: z.string().min(1, { message: "Please select a music genre." }),
+  specificEventDate: z.date().optional(), // Calendar provides a Date object
   eventTimeOfDay: z.string().optional(),
   numberOfGuests: z.string().optional(),
   additionalDetails: z.string().optional(),
@@ -82,7 +82,7 @@ export default function SuggestArtistsForm() {
     defaultValues: {
       eventType: "",
       budgetRange: "",
-      musicGenrePreference: "", // Changed from [] to ""
+      musicGenrePreference: "",
       specificEventDate: undefined,
       eventTimeOfDay: "",
       numberOfGuests: "",
@@ -103,8 +103,12 @@ export default function SuggestArtistsForm() {
         eventEndTime = end;
       }
 
+      // Convert Date object to ISO string for the flow
       const submissionValues: SuggestArtistsInput = {
         ...values,
+        specificEventDate: values.specificEventDate ? values.specificEventDate.toISOString() : undefined,
+        eventStartTime: eventStartTime,
+        eventEndTime: eventEndTime,
         numberOfGuests: values.numberOfGuests === "" ? undefined : values.numberOfGuests,
         additionalDetails: values.additionalDetails || undefined,
       };
@@ -188,7 +192,7 @@ export default function SuggestArtistsForm() {
                 name="musicGenrePreference"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Music Genre Preference</FormLabel> {/* Changed label */}
+                    <FormLabel>Music Genre Preference</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -211,8 +215,6 @@ export default function SuggestArtistsForm() {
               <FormField
                 control={form.control}
                 name="specificEventDate"
-                // @ts-ignore - specificEventDate is handled as Date | undefined in the form,
-                // but the AI input expects Date | undefined and handles the conversion internally.
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Specific Event Date (Optional)</FormLabel>
@@ -349,5 +351,3 @@ export default function SuggestArtistsForm() {
     </Card>
   );
 }
-
-    
