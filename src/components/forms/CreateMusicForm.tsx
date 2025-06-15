@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +33,7 @@ import { createMusic } from "@/ai/flows/create-music";
 import { useState } from "react";
 import { Loader2, Music2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { MultiSelect } from "@/components/ui/multi-select";
+// Removed MultiSelect import as it's no longer used
 import { type CreateMusicOutput, type CreateMusicInput } from "@/ai/types";
 
 const instrumentsList = [
@@ -74,7 +75,7 @@ const styleVariationList = [
 ].sort();
 
 const formSchema = z.object({
-  genre: z.array(z.string()).min(1, { message: "Please select at least one genre." }),
+  genre: z.string().min(1, { message: "Please select a genre." }), // Changed from z.array
   mood: z.string().min(1, { message: "Please select a mood." }),
   instruments: z.array(z.string()).min(1, { message: "Please select at least one instrument." }),
   length: z.string().min(1, { message: "Please select a length." }),
@@ -91,7 +92,7 @@ export default function CreateMusicForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      genre: [],
+      genre: "", // Changed from []
       mood: "",
       instruments: [],
       length: "medium",
@@ -106,11 +107,11 @@ export default function CreateMusicForm() {
     setComposition(null);
     try {
       const submissionValues: CreateMusicInput = {
-        genre: values.genre.join(', '),
+        genre: values.genre, // No longer needs .join(', ')
         mood: values.mood,
         instruments: values.instruments.join(', '),
         length: values.length,
- styleVariation: (values.styleVariation === "__NONE__" || values.styleVariation === "") ? undefined : values.styleVariation,
+        styleVariation: (values.styleVariation === "__NONE__" || values.styleVariation === "") ? undefined : values.styleVariation,
       };
       const result = await createMusic(submissionValues);
       setComposition(result);
@@ -144,15 +145,21 @@ export default function CreateMusicForm() {
                 name="genre"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Genres</FormLabel>
-                    <FormControl>
-                      <MultiSelect
-                        options={genreList.map(genre => ({ value: genre, label: genre }))}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select genres"
-                      />
-                    </FormControl>
+                    <FormLabel>Genre</FormLabel> {/* Changed from Genres */}
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a genre" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {genreList.map((genreItem) => (
+                          <SelectItem key={genreItem} value={genreItem}>
+                            {genreItem}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -246,7 +253,7 @@ export default function CreateMusicForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
- <SelectItem value="__NONE__">None</SelectItem>
+                        <SelectItem value="__NONE__">None</SelectItem>
                         {styleVariationList.map((style) => (
                           <SelectItem key={style} value={style}>{style}</SelectItem>
                         ))}
