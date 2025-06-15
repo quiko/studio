@@ -43,7 +43,8 @@ import {
   Users2,
   Heart,
   Eye,
-   Languages,
+  Languages,
+  Map // Added Map icon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -62,6 +63,7 @@ import {
   Sector, // For active shape in PieChart (Donut)
 } from 'recharts';
 import Image from 'next/image';
+import TourPlanningAssistant from '@/components/analytics/TourPlanningAssistant'; // Import the new component
 
 // Chart Data (as provided in the prompt)
 const ageData = [ { name: "13-17", value: 5 }, { name: "18-24", value: 35 }, { name: "25-34", value: 40 }, { name: "35-44", value: 15 }, { name: "45-54", value: 3 }, { name: "55+", value: 2 }, ];
@@ -298,12 +300,16 @@ export default function AnalyticsPage() {
 
       {/* Tabbed Section */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="demographics">Demographics</TabsTrigger>
           <TabsTrigger value="geography">Geography</TabsTrigger>
           <TabsTrigger value="behavior">Behavior</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="tour-planning">
+            <Map className="mr-2 h-4 w-4" />
+            Tour Planning
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -714,6 +720,10 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+        {/* Tour Planning Tab Content */}
+        <TabsContent value="tour-planning" className="mt-6">
+          <TourPlanningAssistant />
         </TabsContent>
       </Tabs>
     </div>

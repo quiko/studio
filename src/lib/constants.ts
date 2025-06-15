@@ -46,6 +46,12 @@ export const NAV_ITEMS: NavItem[] = [
     allowedUsers: [UserType.ORGANIZER],
   },
   {
+    label: 'Events',
+    href: '/dashboard/events-for-artists',
+    icon: CalendarDays,
+    allowedUsers: [UserType.ARTIST],
+  },
+  {
     label: 'Suggest Artists',
     href: '/dashboard/suggest-artists',
     icon: Users,
@@ -73,7 +79,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Audience Analytics',
     href: '/dashboard/analytics',
     icon: BarChart,
-    allowedUsers: [UserType.ORGANIZER, UserType.ARTIST],
+ allowedUsers: [UserType.ARTIST, UserType.ORGANIZER],
   },
   {
     label: 'Messages',
