@@ -6,10 +6,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { useState } from "react";
-import { Button } from "@/components/ui/button"; // Added for future save button
+import { Button } from "@/components/ui/button";
+import { Loader2, Save } from "lucide-react"; // Added Loader2 and Save
 
 export default function ArtistProfilePage() {
   const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const profileFormId = "artist-profile-main-form";
   // In a real scenario, you would fetch and set existing availability here.
 
   // Handler for saving availability (to be implemented later)
@@ -31,7 +34,7 @@ export default function ArtistProfilePage() {
             <CardDescription>Edit your public artist details and portfolio.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          <ArtistProfileForm />
+          <ArtistProfileForm formId={profileFormId} onSetIsLoading={setIsProfileSaving} />
         </CardContent>
       </Card>
 
@@ -69,6 +72,22 @@ export default function ArtistProfilePage() {
         </CardFooter>
         */}
       </Card>
+
+      <div className="flex justify-end pt-4 border-t">
+        <Button
+          type="submit"
+          form={profileFormId}
+          disabled={isProfileSaving}
+          className="min-w-[150px]"
+        >
+          {isProfileSaving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {isProfileSaving ? "Saving Profile..." : "Save Profile"}
+        </Button>
+      </div>
     </div>
   );
 }

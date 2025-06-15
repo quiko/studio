@@ -39,7 +39,7 @@ const ArtistProfileFormSchema = z.object({
   genre: z.string().min(1, { message: "Please select your main genre." }),
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video." }).optional().or(z.literal('')),
- bio: z.string().optional(),
+  bio: z.string().optional(),
   priceRange: z.string().optional(),
   profileImage: z.string().url({ message: "Profile image URL is required." }),
   dataAiHint: z.string().max(20, { message: "AI hint should be concise (max 20 chars), e.g., 'musician portrait'."}).optional(),
@@ -47,10 +47,14 @@ const ArtistProfileFormSchema = z.object({
 
 type ArtistProfileFormValues = z.infer<typeof ArtistProfileFormSchema>;
 
-export default function ArtistProfileForm() {
+interface ArtistProfileFormProps {
+  formId: string;
+  onSetIsLoading: (isLoading: boolean) => void;
+}
+
+export default function ArtistProfileForm({ formId, onSetIsLoading }: ArtistProfileFormProps) {
   const { firebaseUser, getArtistProfile, updateArtistProfile, userRole } = useUser();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentProfileImage, setCurrentProfileImage] = useState<string | null>(null);
@@ -63,8 +67,8 @@ export default function ArtistProfileForm() {
       genre: "",
       portfolioAudio: "",
       portfolioVideo: "",
- bio: "",
- priceRange: undefined,
+      bio: "",
+      priceRange: undefined,
       profileImage: "",
       dataAiHint: "",
     },
@@ -78,8 +82,8 @@ export default function ArtistProfileForm() {
         genre: profile.genre || "",
         portfolioAudio: profile.portfolioAudio || "",
         portfolioVideo: profile.portfolioVideo || "",
- bio: profile.bio || "",
- priceRange: profile.priceRange || undefined, // Assuming priceRange is string
+        bio: profile.bio || "",
+        priceRange: profile.priceRange || undefined,
         profileImage: profile.profileImage || "https://placehold.co/150x150.png",
         dataAiHint: profile.dataAiHint || "musician portrait",
       });
@@ -129,7 +133,7 @@ export default function ArtistProfileForm() {
       toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
       return;
     }
-    setIsLoading(true);
+    onSetIsLoading(true); // Inform parent that loading has started
 
     let finalImageURL = values.profileImage;
 
@@ -162,7 +166,7 @@ export default function ArtistProfileForm() {
         });
       } catch (error) {
         setIsUploading(false);
-        setIsLoading(false);
+        onSetIsLoading(false); // Inform parent that loading has ended
         return; 
       }
       setIsUploading(false);
@@ -175,8 +179,8 @@ export default function ArtistProfileForm() {
       genre: values.genre,
       portfolioAudio: values.portfolioAudio || "",
       portfolioVideo: values.portfolioVideo || "",
- bio: values.bio || "",
- priceRange: values.priceRange || '', // Ensure priceRange is always a string
+      bio: values.bio || "",
+      priceRange: values.priceRange || '',
       profileImage: finalImageURL,
       dataAiHint: values.dataAiHint || "musician portrait",
     };
@@ -191,13 +195,13 @@ export default function ArtistProfileForm() {
       console.error("Failed to update profile:", error);
       toast({ title: "Error", description: "Failed to update profile. Please try again.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      onSetIsLoading(false); // Inform parent that loading has ended
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" id={formId}>
         <FormField
           control={form.control}
           name="profileImage"
@@ -221,11 +225,11 @@ export default function ArtistProfileForm() {
                         accept="image/png, image/jpeg, image/webp"
                         onChange={handleImageChange}
                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        disabled={isUploading || isLoading}
+                        disabled={isUploading || form.formState.isSubmitting}
                       />
                   </FormControl>
                   {currentProfileImage && !currentProfileImage.includes("placehold.co") && (
-                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isUploading || isLoading}>
+                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isUploading || form.formState.isSubmitting}>
                         <Trash2 className="mr-2 h-4 w-4" /> Remove Current Image
                     </Button>
                   )}
@@ -237,7 +241,6 @@ export default function ArtistProfileForm() {
             </FormItem>
           )}
         />
-
 
         <div className="grid md:grid-cols-2 gap-6">
           <FormField
@@ -318,7 +321,7 @@ export default function ArtistProfileForm() {
                 <Input 
                   placeholder="e.g., $100 - $500 per event" 
                   {...field} 
-                  value={field.value || ''} // Ensure controlled component doesn't get undefined
+                  value={field.value || ''} 
                   onChange={field.onChange}
                 />
               </FormControl>
@@ -348,15 +351,7 @@ export default function ArtistProfileForm() {
             </FormItem>
           )}
         />
-        
-        <Button type="submit" disabled={isLoading || isUploading}>
-          {isUploading || isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {isUploading ? `Uploading (${Math.round(uploadProgress)}%)...` : (isLoading ? "Saving..." : "Save Profile")}
-        </Button>
+        {/* Submit button is now rendered by the parent page */}
       </form>
     </Form>
   );
