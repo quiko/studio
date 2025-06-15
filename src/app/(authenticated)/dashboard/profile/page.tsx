@@ -38,7 +38,7 @@ export default function ArtistProfilePage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="manage-availability"> {/* Added id here */}
         <CardHeader>
           <CardTitle className="font-headline">Manage Availability</CardTitle>
           <CardDescription>Select the dates you are available for bookings. Click a date to select or deselect it.</CardDescription>
@@ -91,3 +91,4 @@ export default function ArtistProfilePage() {
     </div>
   );
 }
+
