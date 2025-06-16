@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { APP_NAME } from '@/lib/constants';
@@ -6,8 +7,16 @@ import { Home, Users, Lightbulb, Mail, UserCircle, ArrowRight, BookOpen } from '
 import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo';
 
 export default function LandingPage() {
+  const backgroundImageUrl = "https://placehold.co/1920x1080.png"; // Placeholder for dark crumpled paper
+
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden p-4 md:p-8 grid-background">
+    <div 
+      className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden p-4 md:p-8 bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: `url(${backgroundImageUrl})` }}
+      data-ai-hint="dark crumpled paper texture"
+    >
+      {/* Overlay to ensure text readability if background is too busy, adjust opacity as needed */}
+      <div className="absolute inset-0 bg-black/50 z-0"></div>
 
       <Link href="/signup" className="absolute top-6 right-6 md:top-8 md:right-8 text-sm text-primary hover:underline z-20 flex items-center group">
         Sign Up <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -55,7 +64,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground/50 z-0 pointer-events-none">
+      <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground/50 z-10 pointer-events-none">
         <p>&copy; {new Date().getFullYear()} {APP_NAME}. All rights reserved.</p>
       </footer>
     </div>

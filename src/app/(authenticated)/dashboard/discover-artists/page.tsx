@@ -20,24 +20,24 @@ export default function DiscoverArtistsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // AMÉLIORATION : Remplacement de onSnapshot par getDocs pour une meilleure performance et la correction de la fuite mémoire.
+  // IMPROVEMENT: Replaced onSnapshot with getDocs for better performance and to fix the memory leak.
   useEffect(() => {
-    // Attend la fin du chargement des informations de l'utilisateur
+    // Wait for user information to finish loading
     if (userLoading) {
       return;
     }
 
-    // 1. Vérification du rôle et redirection si nécessaire
+    // 1. Check role and redirect if necessary
     if (userRole !== UserType.ORGANIZER) {
       router.push('/dashboard');
       return;
     }
 
-    // 2. Fonction asynchrone pour charger les données une seule fois
+    // 2. Asynchronous function to load data once
     const fetchArtists = async () => {
       try {
         const artistsQuery = query(
-          collection(db, 'users'), 
+          collection(db, 'users'),
           where('role', '==', 'artist')
         ).withConverter(userProfileConverter);
 
@@ -49,7 +49,7 @@ export default function DiscoverArtistsPage() {
         setAllArtists(artistsData);
       } catch (error) {
         console.error("Error fetching artists:", error);
-        // Optionnel: afficher une erreur dans l'UI
+        // Optional: display an error in the UI
       } finally {
         setLoading(false);
       }
@@ -58,16 +58,16 @@ export default function DiscoverArtistsPage() {
     fetchArtists();
   }, [userRole, userLoading, router]);
 
-  // AMÉLIORATION : Filtrage cohérent avec la structure de données recommandée
+  // IMPROVEMENT: Consistent filtering with the recommended data structure
   const filteredArtists = allArtists.filter(artist => {
     const term = searchTerm.toLowerCase();
     const nameMatch = artist.fullName?.toLowerCase().includes(term);
-    // On cherche le genre dans l'objet imbriqué `artistProfileData`
+    // Search for genre within the nested `artistProfileData` object
     const genreMatch = artist.artistProfileData?.genre?.toLowerCase().includes(term);
     return nameMatch || genreMatch;
   });
 
-  // SIMPLIFIÉ : Affichage unique pendant le chargement initial ou la redirection
+  // SIMPLIFIED: Single display for initial loading or redirection
   if (userLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -77,9 +77,9 @@ export default function DiscoverArtistsPage() {
     );
   }
   
-  // La redirection est gérée dans le useEffect, on peut aussi empêcher le rendu si le rôle n'est pas bon
+  // Redirection is handled in useEffect, we can also prevent rendering if the role is incorrect
   if (userRole !== UserType.ORGANIZER) {
-    return null; // ou un message "Accès non autorisé"
+    return null; // or an "Unauthorized access" message
   }
 
   return (

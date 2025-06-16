@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "maestroai-byliq"
-  }
+    "default": "maestroai-byliq",
+    "prod": "maestroai-byliq"
+  },
+  "targets": {},
+  "etags": {}
 }

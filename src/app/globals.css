@@ -85,10 +85,7 @@
   body {
     @apply bg-background text-foreground;
   }
-  .grid-background {
-    background-image: linear-gradient(to right, hsl(var(--border)/0.08) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border)/0.08) 1px, transparent 1px);
-    background-size: 60px 60px; /* Adjust size of grid squares */
-  }
+ /* Removed .grid-background as it's no longer needed with a full background image */
 }
 
 .indicator {
