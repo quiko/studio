@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/contexts/UserContext";
-import type { ArtistProfileData } from "@/lib/constants";
+import type { ArtistProfileData, ArtistAvailabilitySlot } from "@/lib/constants";
 import { useState, useEffect, type ChangeEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, UploadCloud, FileAudio, Trash2 } from "lucide-react";
@@ -39,18 +39,29 @@ const ArtistProfileFormSchema = z.object({
   genre: z.string().min(1, { message: "Please select your main genre." }),
   portfolioAudio: z.string().url({ message: "Please enter a valid URL for audio." }).optional().or(z.literal('')),
   portfolioVideo: z.string().url({ message: "Please enter a valid URL for video." }).optional().or(z.literal('')),
- bio: z.string().optional(),
+  bio: z.string().optional(),
   priceRange: z.string().optional(),
   profileImage: z.string().url({ message: "Profile image URL is required." }),
   dataAiHint: z.string().max(20, { message: "AI hint should be concise (max 20 chars), e.g., 'musician portrait'."}).optional(),
+  availability: z.array(
+    z.object({
+      startDate: z.date(),
+      endDate: z.date(),
+    })
+  ).optional(),
 });
 
 type ArtistProfileFormValues = z.infer<typeof ArtistProfileFormSchema>;
 
-export default function ArtistProfileForm() {
+interface ArtistProfileFormProps {
+  formId: string;
+  onSetIsLoading: (isLoading: boolean) => void;
+  currentAvailabilityDates?: Date[]; // New prop to receive selected dates from parent
+}
+
+export default function ArtistProfileForm({ formId, onSetIsLoading, currentAvailabilityDates }: ArtistProfileFormProps) {
   const { firebaseUser, getArtistProfile, updateArtistProfile, userRole } = useUser();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentProfileImage, setCurrentProfileImage] = useState<string | null>(null);
@@ -63,29 +74,53 @@ export default function ArtistProfileForm() {
       genre: "",
       portfolioAudio: "",
       portfolioVideo: "",
- bio: "",
- priceRange: undefined,
+      bio: "",
+      priceRange: undefined,
       profileImage: "",
       dataAiHint: "",
+      availability: [],
     },
   });
 
   useEffect(() => {
     if (firebaseUser && userRole === "artist") {
       const profile = getArtistProfile(firebaseUser.uid);
+      // Availability from profile (already Date objects from context)
+      const profileAvailability = profile.availability?.map(slot => ({
+        startDate: slot.startDate instanceof Date ? slot.startDate : new Date(slot.startDate),
+        endDate: slot.endDate instanceof Date ? slot.endDate : new Date(slot.endDate),
+      })) || [];
+
       form.reset({
         name: profile.name || "",
         genre: profile.genre || "",
         portfolioAudio: profile.portfolioAudio || "",
         portfolioVideo: profile.portfolioVideo || "",
- bio: profile.bio || "",
- priceRange: profile.priceRange || undefined, // Assuming priceRange is string
+        bio: profile.bio || "",
+        priceRange: profile.priceRange || undefined,
         profileImage: profile.profileImage || "https://placehold.co/150x150.png",
         dataAiHint: profile.dataAiHint || "musician portrait",
+        availability: profileAvailability, // Use availability from profile data
       });
       setCurrentProfileImage(profile.profileImage || "https://placehold.co/150x150.png");
     }
   }, [firebaseUser, getArtistProfile, form, userRole]);
+
+  // Effect to update form's availability when currentAvailabilityDates (from parent calendar) changes
+  useEffect(() => {
+    if (currentAvailabilityDates) {
+      const newAvailabilitySlots = currentAvailabilityDates.map(date => {
+        // For single day selection, startDate and endDate are the same day
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0); // Start of the day
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999); // End of the day
+        return { startDate, endDate };
+      });
+      form.setValue("availability", newAvailabilitySlots, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [currentAvailabilityDates, form]);
+
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -129,7 +164,7 @@ export default function ArtistProfileForm() {
       toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
       return;
     }
-    setIsLoading(true);
+    onSetIsLoading(true); 
 
     let finalImageURL = values.profileImage;
 
@@ -162,27 +197,30 @@ export default function ArtistProfileForm() {
         });
       } catch (error) {
         setIsUploading(false);
-        setIsLoading(false);
+        onSetIsLoading(false); 
         return; 
       }
       setIsUploading(false);
       setNewImageFile(null); 
     }
 
-
-    const profileData: ArtistProfileData = {
+    // The `values.availability` should now be correctly populated from the parent calendar's selected dates
+    // It already contains JavaScript Date objects due to the useEffect hook.
+    const profileDataToSave: ArtistProfileData = {
       name: values.name,
       genre: values.genre,
       portfolioAudio: values.portfolioAudio || "",
       portfolioVideo: values.portfolioVideo || "",
- bio: values.bio || "",
- priceRange: values.priceRange || '', // Ensure priceRange is always a string
+      bio: values.bio || "",
+      priceRange: values.priceRange || '',
       profileImage: finalImageURL,
       dataAiHint: values.dataAiHint || "musician portrait",
+      availability: values.availability || [], // Ensure it's an empty array if undefined
     };
 
     try {
-      updateArtistProfile(firebaseUser.uid, profileData);
+      // UserContext's updateArtistProfile expects Date objects for availability, which is what we have.
+      updateArtistProfile(firebaseUser.uid, profileDataToSave);
       toast({
         title: "Profile Updated",
         description: "Your artist profile has been successfully updated.",
@@ -191,13 +229,13 @@ export default function ArtistProfileForm() {
       console.error("Failed to update profile:", error);
       toast({ title: "Error", description: "Failed to update profile. Please try again.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      onSetIsLoading(false); 
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" id={formId}>
         <FormField
           control={form.control}
           name="profileImage"
@@ -221,11 +259,11 @@ export default function ArtistProfileForm() {
                         accept="image/png, image/jpeg, image/webp"
                         onChange={handleImageChange}
                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        disabled={isUploading || isLoading}
+                        disabled={isUploading || form.formState.isSubmitting}
                       />
                   </FormControl>
                   {currentProfileImage && !currentProfileImage.includes("placehold.co") && (
-                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isUploading || isLoading}>
+                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isUploading || form.formState.isSubmitting}>
                         <Trash2 className="mr-2 h-4 w-4" /> Remove Current Image
                     </Button>
                   )}
@@ -237,7 +275,6 @@ export default function ArtistProfileForm() {
             </FormItem>
           )}
         />
-
 
         <div className="grid md:grid-cols-2 gap-6">
           <FormField
@@ -318,11 +355,11 @@ export default function ArtistProfileForm() {
                 <Input 
                   placeholder="e.g., $100 - $500 per event" 
                   {...field} 
-                  value={field.value || ''} // Ensure controlled component doesn't get undefined
+                  value={field.value || ''} 
                   onChange={field.onChange}
                 />
               </FormControl>
-              <FormDescription>Enter a base numeric rate. Currency (e.g., USD, EUR) and units (e.g., per hour, per event) can be detailed in your bio or reviews section.</FormDescription>
+              <FormDescription>Enter your typical price range for performances or services.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -348,15 +385,7 @@ export default function ArtistProfileForm() {
             </FormItem>
           )}
         />
-        
-        <Button type="submit" disabled={isLoading || isUploading}>
-          {isUploading || isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {isUploading ? `Uploading (${Math.round(uploadProgress)}%)...` : (isLoading ? "Saving..." : "Save Profile")}
-        </Button>
+        {/* The submit button is now rendered by the parent page src/app/(authenticated)/dashboard/profile/page.tsx */}
       </form>
     </Form>
   );

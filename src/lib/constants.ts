@@ -46,6 +46,12 @@ export const NAV_ITEMS: NavItem[] = [
     allowedUsers: [UserType.ORGANIZER],
   },
   {
+    label: 'Events',
+    href: '/dashboard/events-for-artists',
+    icon: CalendarDays,
+    allowedUsers: [UserType.ARTIST],
+  },
+  {
     label: 'Suggest Artists',
     href: '/dashboard/suggest-artists',
     icon: Users,
@@ -70,10 +76,10 @@ export const NAV_ITEMS: NavItem[] = [
     allowedUsers: [UserType.ARTIST],
   },
   {
-    label: 'Music Industry Analytics',
+    label: 'Audience Analytics',
     href: '/dashboard/analytics',
     icon: BarChart,
-    allowedUsers: [UserType.ORGANIZER, UserType.ARTIST],
+ allowedUsers: [UserType.ARTIST, UserType.ORGANIZER],
   },
   {
     label: 'Messages',
@@ -98,6 +104,11 @@ export type EventItem = {
   description: string;
 };
 
+export type ArtistAvailabilitySlot = {
+  startDate: Date;
+  endDate: Date;
+};
+
 export type ArtistProfileData = {
   name: string; // Artist/Band Name
   genre: string; // Main genre
@@ -107,6 +118,8 @@ export type ArtistProfileData = {
   priceRange: string; // e.g., "$500 - $1000" - Changed from indicativeRates
   profileImage: string; // URL to the image in Firebase Storage or placeholder, required
   dataAiHint?: string; // Optional hint for AI image services if this image is used as a base
+  indicativeRates?: number; // Base numeric rate, optional
+  availability?: ArtistAvailabilitySlot[]; // Array of availability slots
 };
 
 export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
@@ -115,9 +128,11 @@ export const DEFAULT_ARTIST_PROFILE: ArtistProfileData = {
   portfolioAudio: '',
   bio: '', // Added bio
   portfolioVideo: '',
-  priceRange: '', // Changed from indicativeRates
+  priceRange: '', // Defaulted to empty string, can also be undefined
   profileImage: 'https://placehold.co/150x150.png',
   dataAiHint: 'abstract musician',
+  indicativeRates: undefined,
+  availability: [],
 };
 
 
@@ -278,3 +293,4 @@ export const MOCK_ARTIST_CONTRACTS: ArtistContractItem[] = [
   },
   // ... more mock contracts for artist view
 ];
+

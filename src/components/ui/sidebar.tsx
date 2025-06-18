@@ -743,6 +743,7 @@ SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 export {
   Sidebar,
   SidebarContent,
+  SidebarTrigger,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
@@ -760,9 +761,8 @@ export {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarProvider,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger,
+  SidebarProvider,
   useSidebar,
 }

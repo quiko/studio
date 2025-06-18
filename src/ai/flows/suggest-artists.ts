@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -9,7 +10,7 @@ const SuggestArtistsInputSchema = z.object({
   eventType: z.string().describe('The type of event (e.g., Corporate Event, Wedding, Festival).'),
   budgetRange: z.string().describe('The estimated budget range for the artist (e.g., "$500 - $1000", "€3000", "Negotiable").'),
   musicGenrePreference: z.string().describe('The preferred music genre for the event.'),
-  specificEventDate: z.date().describe('The specific date for the event.').optional(),
+  specificEventDate: z.string().datetime({ message: "Invalid ISO 8601 date-time string" }).describe("The specific date for the event, provided as a string in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:mm:ss.sssZ').").optional(),
   eventStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:mm format").optional(),
   eventEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:mm format").optional(),
   numberOfGuests: z.string().optional(),
@@ -59,7 +60,7 @@ async function getFilteredArtists(input: SuggestArtistsInput): Promise<Artist[]>
       if (input.specificEventDate) {
         if (!artist.availability || artist.availability.length === 0) return false;
 
-        const eventDate = new Date(input.specificEventDate);
+        const eventDate = new Date(input.specificEventDate); // Converts ISO string to Date
 
         let isAvailableOnDate = false;
         if (input.eventStartTime && input.eventEndTime) {
@@ -143,6 +144,10 @@ const suggestArtistsFlow = ai.defineFlow(
     const artistDetailsForPrompt = filteredArtists.map(artist => 
       `- Nom: ${artist.fullName}, Genres: ${artist.musicGenres?.join(', ') || 'Non spécifié'}, Tarif: ${artist.priceRange || 'Non spécifié'}`
     ).join('\n');
+    
+    // Convert ISO string date back to Date object for display in prompt if it exists
+    const displayEventDate = input.specificEventDate ? new Date(input.specificEventDate).toDateString() : '';
+
 
     const prompt = `You are an expert AI assistant helping event organizers find the perfect artist.
 Based on the event details provided and the following list of available and budget-compatible artists, suggest the top 1-3 artists that are the best fit.
@@ -155,7 +160,7 @@ Event Details:
 - Event Type: ${input.eventType}
 - Budget Range: ${input.budgetRange}
 - Music Genre Preference: ${input.musicGenrePreference}
-${input.specificEventDate ? `- Event Date: ${input.specificEventDate.toDateString()}` : ''}
+${displayEventDate ? `- Event Date: ${displayEventDate}` : ''}
 ${input.eventEndTime ? `- Performance End Time: ${input.eventEndTime}` : ''}
 ${input.numberOfGuests ? `- Number of Guests: ${input.numberOfGuests}` : ''}
 ${input.additionalDetails ? `- Additional Details: ${input.additionalDetails}` : ''}

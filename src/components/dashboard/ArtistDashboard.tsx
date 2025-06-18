@@ -1,9 +1,10 @@
+
 "use client";
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Music2, FileText, MessageSquare } from 'lucide-react';
+import { Music2, FileText, MessageSquare, CalendarCheck } from 'lucide-react'; // Added CalendarCheck
 import { useUser } from '@/contexts/UserContext';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,7 +31,8 @@ export default function ArtistDashboard() {
             <Skeleton className="h-10 w-full" />
           </CardContent>
         </Card>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
@@ -62,6 +64,7 @@ export default function ArtistDashboard() {
             height={80} 
             className="rounded-full object-cover"
             priority 
+            data-ai-hint={artistProfile?.dataAiHint || "musician portrait"}
           />
           <div>
             <CardTitle className="font-headline text-2xl">{profileName}</CardTitle>
@@ -75,7 +78,7 @@ export default function ArtistDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -120,7 +123,23 @@ export default function ArtistDashboard() {
             </Link>
           </CardContent>
         </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-headline">
+              <CalendarCheck className="h-6 w-6 text-primary" />
+              Manage Availability
+            </CardTitle>
+            <CardDescription>Set your available dates for bookings.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/profile#manage-availability">
+              <Button className="w-full" variant="outline">Set Availability</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+
