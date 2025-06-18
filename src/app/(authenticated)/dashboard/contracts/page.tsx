@@ -13,18 +13,66 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { generateContractPdf } from "@/lib/pdfGenerator";
+import { uploadPdfToFirebaseStorage, updateContractPdfUrl } from "@/lib/firebaseUtils";
+import { useState } from "react";
+import PdfPreviewModal from "@/components/modals/PdfPreviewModal";
 
 
 function OrganizerContractItemCard({ contract }: { contract: GeneratedContractData }) {
   const { organizerSignsContract } = useUser();
   const { toast } = useToast();
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [currentPdfBlob, setCurrentPdfBlob] = useState<Blob | null>(null);
 
-  const handleSignAndSend = () => {
-    if (contract.status === 'draft') {
-      organizerSignsContract(contract.id);
+  const handleGeneratePreview = async () => {
+    const pdf = await generateContractPdf({
+      ...contract,
+      fee: parseFloat(contract.fee), // Ensure fee is a number if your pdfGenerator expects it
+      clauses: contract.clauses.split('\n'), 
+    });
+    const previewUrl = URL.createObjectURL(pdf);
+    setCurrentPdfBlob(pdf);
+    setPreviewPdfUrl(previewUrl);
+    setShowPreviewModal(true);
+  };
+  
+  const handleConfirmAndSend = async () => {
+    if (!currentPdfBlob || !contract.id) {
+        toast({
+            title: "Error",
+            description: "PDF blob or contract ID is missing.",
+            variant: "destructive",
+        });
+        return;
+    }
+  
+    try {
+      // Note: The original updateContractPdfUrl was designed for "contracts/{contractId}"
+      // The current mock data for organizerContracts does not persist to Firestore
+      // so updateContractPdfUrl would fail unless these contracts are also in a 'contracts' collection.
+      // For now, we'll simulate the upload and update local state for the demo.
+      // In a real app, ensure contract.id refers to a valid Firestore document.
+      const downloadUrl = await uploadPdfToFirebaseStorage(currentPdfBlob, `${contract.eventName}_${contract.id}.pdf`);
+      
+      // This part would ideally update the Firestore document:
+      // await updateContractPdfUrl(contract.id, downloadUrl); 
+      // For mock:
+      console.log(`Simulated: PDF for contract ${contract.id} uploaded to ${downloadUrl}`);
+      
+      organizerSignsContract(contract.id); 
       toast({
-        title: "Contract Signed by You",
-        description: `The contract for "${contract.eventName}" is now marked as signed and pending artist signature.`,
+        title: "Contract Sent",
+        description: "PDF uploaded and contract marked as signed.",
+      });
+      setShowPreviewModal(false);
+    } catch (error) {
+      console.error("Error confirming and sending contract:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Something went wrong uploading the contract PDF.",
+        variant: "destructive",
       });
     }
   };
@@ -60,6 +108,7 @@ function OrganizerContractItemCard({ contract }: { contract: GeneratedContractDa
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -83,17 +132,24 @@ function OrganizerContractItemCard({ contract }: { contract: GeneratedContractDa
         <Button 
           variant="default" 
           size="sm" 
-          onClick={handleSignAndSend}
+          onClick={handleGeneratePreview}
           disabled={contract.status !== 'draft'}
         >
           <Send className="mr-1 h-3 w-3" /> 
-          {contract.status === 'draft' ? 'Sign & Send' : 'Awaiting Artist'}
+          {contract.status === 'draft' ? 'Sign & Send' : 'View Sent'} 
         </Button>
          <Button variant="destructive" size="sm" disabled={contract.status === 'signed' || contract.status === 'pending_artist_signature'}>
           <Trash2 className="mr-1 h-3 w-3" /> Delete
         </Button>
       </CardFooter>
     </Card>
+    <PdfPreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        pdfUrl={previewPdfUrl}
+        onConfirm={handleConfirmAndSend}
+    />
+    </>
   )
 }
 
@@ -110,9 +166,9 @@ export default function ContractsPage() {
       case 'signed':
         artistFacingStatus = 'Accepted';
         break;
-      case 'completed': // Assuming 'completed' in GeneratedContractData means 'Fulfilled' for artist
-        artistFacingStatus = 'Fulfilled';
-        break;
+      // case 'completed': // Assuming 'completed' in GeneratedContractData means 'Fulfilled' for artist
+      //   artistFacingStatus = 'Fulfilled';
+      //   break;
       case 'cancelled':
         artistFacingStatus = 'Cancelled';
         break;
@@ -221,3 +277,4 @@ export default function ContractsPage() {
     </div>
   );
 }
+

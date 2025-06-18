@@ -7,7 +7,7 @@ import { Home, Users, Lightbulb, Mail, UserCircle, ArrowRight, BookOpen } from '
 import { ObsessionFullTextLogo } from '@/components/icons/ObsessionFullTextLogo';
 
 export default function LandingPage() {
-  const backgroundImageUrl = "https://placehold.co/1920x1080.png"; // Placeholder for dark crumpled paper
+  const backgroundImageUrl = "https://www.canva.com/design/DAGqjV76lOI/oubz8-a2LnbWj874Dp_whA/edit?utm_content=DAGqjV76lOI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton";
 
   return (
     <div 
