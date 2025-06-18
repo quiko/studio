@@ -7,6 +7,7 @@ interface Contract {
   artistName: string;
   fee: number;
   clauses: string[];
+  signatureDataUrl?: string; 
 }
 
 export const generateContractPdf = async (contract: Contract): Promise<Blob> => {
@@ -39,6 +40,14 @@ export const generateContractPdf = async (contract: Contract): Promise<Blob> => 
   contract.clauses.forEach((clause, index) => {
     const lines = doc.splitTextToSize(`${index + 1}. ${clause}`, doc.internal.pageSize.getWidth() - 2 * margin);
     doc.text(lines, margin, yOffset);
+    // Add signature image if provided
+    if (contract.signatureDataUrl) {
+      yOffset += 30;
+      doc.setFontSize(14);
+      doc.text('Organizer Signature:', margin, yOffset);
+      yOffset += 10;
+      doc.addImage(contract.signatureDataUrl, 'PNG', margin, yOffset, 150, 50);
+    }
     yOffset += (lines.length * 15) + 10; // Adjust spacing based on number of lines
   });
 

@@ -17,26 +17,42 @@ import { generateContractPdf } from "@/lib/pdfGenerator";
 import { uploadPdfToFirebaseStorage, updateContractPdfUrl } from "@/lib/firebaseUtils";
 import { useState } from "react";
 import PdfPreviewModal from "@/components/modals/PdfPreviewModal";
+import SignatureModal from "@/components/modals/SignatureModal";
 
 
-function OrganizerContractItemCard({ contract }: { contract: GeneratedContractData }) {
+function OrganizerContractItemCard({
+  contract,
+  currentUser,
+}: {
+  contract: GeneratedContractData;
+  currentUser: { uid: string } | null;
+}) {
   const { organizerSignsContract } = useUser();
   const { toast } = useToast();
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [currentPdfBlob, setCurrentPdfBlob] = useState<Blob | null>(null);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const handleGeneratePreview = async () => {
+    setShowSignatureModal(true);
+  };
+  const handleSignatureConfirm = async (signature: string) => {
     const pdf = await generateContractPdf({
       ...contract,
-      fee: parseFloat(contract.fee), // Ensure fee is a number if your pdfGenerator expects it
-      clauses: contract.clauses.split('\n'), 
+      fee: parseFloat(contract.fee),
+      clauses: contract.clauses.split('\n'),
+      signatureDataUrl: signature,
     });
+  
     const previewUrl = URL.createObjectURL(pdf);
     setCurrentPdfBlob(pdf);
     setPreviewPdfUrl(previewUrl);
+    setShowSignatureModal(false);
     setShowPreviewModal(true);
   };
+    
   
   const handleConfirmAndSend = async () => {
     if (!currentPdfBlob || !contract.id) {
@@ -54,7 +70,12 @@ function OrganizerContractItemCard({ contract }: { contract: GeneratedContractDa
       // so updateContractPdfUrl would fail unless these contracts are also in a 'contracts' collection.
       // For now, we'll simulate the upload and update local state for the demo.
       // In a real app, ensure contract.id refers to a valid Firestore document.
-      const downloadUrl = await uploadPdfToFirebaseStorage(currentPdfBlob, `${contract.eventName}_${contract.id}.pdf`);
+      const downloadUrl = await uploadPdfToFirebaseStorage(
+        currentPdfBlob,
+        `${contract.eventName}_${contract.id}.pdf`,
+        currentUser?.uid || 'unknown_user' // fallback just in case
+      );
+      
       
       // This part would ideally update the Firestore document:
       // await updateContractPdfUrl(contract.id, downloadUrl); 
@@ -149,6 +170,12 @@ function OrganizerContractItemCard({ contract }: { contract: GeneratedContractDa
         pdfUrl={previewPdfUrl}
         onConfirm={handleConfirmAndSend}
     />
+    <SignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onConfirm={handleSignatureConfirm}
+    />
+
     </>
   )
 }
@@ -235,7 +262,7 @@ export default function ContractsPage() {
                 ) : (
                     <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-6">
                         {organizerContracts.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(contract => (
-                            <OrganizerContractItemCard key={contract.id} contract={contract} />
+                            <OrganizerContractItemCard key={contract.id} contract={contract} currentUser={currentUser} />
                         ))}
                     </div>
                 )}

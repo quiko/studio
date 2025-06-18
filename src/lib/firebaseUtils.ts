@@ -13,10 +13,10 @@ export const updateContractPdfUrl = async (contractId: string, pdfUrl: string) =
 // Get a reference to the storage service
 const storage = getStorage(getApp()); // Use your initialized Firebase app
 
-export const uploadPdfToFirebaseStorage = async (pdfBlob: Blob, filename: string): Promise<string> => {
+export const uploadPdfToFirebaseStorage = async (pdfBlob: Blob, filename: string, userId: string): Promise<string> => {
   // Generate a unique filename
   const uniqueFilename = `${uuidv4()}_${filename}`;
-  const storageRef = ref(storage, `contracts/${uniqueFilename}`);
+  const storageRef = ref(storage, `contracts/${userId}/${uniqueFilename}`);
 
   try {
     // Upload the blob to Firebase Storage
